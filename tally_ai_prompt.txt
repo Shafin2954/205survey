@@ -1,0 +1,213 @@
+Create a survey form titled "Living Conditions, Background, and Financial Behavior" with the subtitle "A study of financial habits among university students in Bangladesh". The form has 78 questions across 11 sections with encouragement text between some sections. Here are the exact specifications:
+
+---
+
+CONSENT PAGE (show before everything else):
+
+Add a text block with this content:
+"Thank you for taking part in this study. We are researching how university students' living conditions and family background relate to their financial habits, budgeting discipline, and online shopping behaviour.
+• We do not collect your name, student ID, phone number, or email.
+• Responses are used only for academic research and reported in aggregate — no individual is identified.
+• Participation is voluntary. Skip any question, or stop at any time, with no consequence.
+• There are no right or wrong answers — we want your honest, everyday experience.
+• At the end you'll get a light-hearted 'money personality' card based on your answers, which you can share if you want to. It's just for fun and is not part of our research findings. Your answers stay anonymous either way.
+• By continuing you confirm you are at least 18 years old and agree to take part."
+
+Then add a REQUIRED multiple choice question: "Do you agree to participate?" with options: "I agree to participate" / "I do not wish to participate". If they pick "I do not wish to participate", end the form.
+
+---
+
+SECTION A — YOUR UNIVERSITY (put this as a page/section heading):
+
+Q1. REQUIRED multiple choice: "Are you currently an enrolled university-level student in Bangladesh?" Options: Yes / No. If "No" → end form.
+
+Q2. Multiple choice: "What type of institution?" Options: Public university / Private university / College affiliated with National University / Medical college / Engineering / technology university / Agricultural university / Science & technology university / Islamic University / madrasah-stream higher education / Open University / distance / Other (with text field)
+
+Q3. Short answer (optional): "Name of your university or college"
+
+Q4. Multiple choice: "Level of study" Options: 1st year / 2nd year / 3rd year / 4th year / 5th year / Master's / Other
+
+Q5. Multiple choice: "Which city or district is your campus in?" Options: Dhaka / Chattogram / Rajshahi / Khulna / Sylhet / Rangpur / Barishal / Mymensingh / Savar / Gazipur / Other district town (with text field)
+
+Q6. Multiple choice: "Broad field of study" Options: Arts & Humanities / Social Sciences / Business / Natural Sciences / Life / Biological Sciences / Engineering & Technology / Medicine & Health / Law / Agriculture / Education / Other
+
+--- After Section A, add a text block (not a question) showing: "Okay, formalities done. Now the fun part." and below it in a new line: "আনুষ্ঠানিকতা শেষ। এবার আসল খেলা।" ---
+
+SECTION B — ABOUT YOU AND YOUR FAMILY:
+
+Q7. Number input: "Age (completed years)"
+
+Q8. Multiple choice: "Gender" Options: Male / Female / Other / Prefer not to say
+
+Q9. Multiple choice: "What best describes where you grew up?" Options: Urban (city) / Semi-urban (town) / Rural (village) / Outside Bangladesh
+
+Q10. Multiple choice: "Highest education completed by either parent (whichever is higher)" Options: No formal schooling / Up to class 5 / Up to SSC / Up to HSC / Bachelor's / Master's or above / Don't know
+
+Q11. Multiple choice: "Father's primary occupation" Options: Govt./public service / Private service / Business / Agriculture / Retired / not working / Other / prefer not to say
+
+Q12. Multiple choice: "Mother's primary occupation" Options: Homemaker / Govt./public service / Private service / Business / Other / prefer not to say
+
+Q13. Multiple choice: "How many siblings do you have?" Options: 0 / 1 / 2 / 3 or more
+
+Q14. Multiple choice: "What is your birth order among your siblings?" Options: Oldest child / Middle child / Youngest child / Only child
+
+--- After Section B, add a text block: "Halfway to knowing yourself better than your bank statement does." and below: "নিজেকে চেনার পথে অর্ধেক এগিয়ে গেছেন।" ---
+
+SECTION C — LIVING ARRANGEMENT:
+
+Q15. Multiple choice: "Where are you living right now, during term time?" Options: With my parents / family home / University hall or dormitory (actually sleeping there) / Private mess / bachelor mess / Sublet room in a family's flat / Private hostel / Rented flat shared with friends / Rented flat alone / With relatives (not parents) / Other (with text field)
+
+Q16. Multiple choice: "Are you attached to a university hall, even if you don't sleep there?" Options: Yes, attached and living there / Yes, attached but living elsewhere / No, not attached / My institution has no halls / Not sure
+CONDITIONAL LOGIC: Only show Q16 if Q2 answer is one of: "Public university" OR "Engineering / technology university" OR "Agricultural university" OR "Science & technology university" OR "Medical college" OR "Islamic University / madrasah-stream higher education"
+
+Q17. Multiple choice: "Did you move away from your family's home in order to study?" Options: Yes, moved to a different district / Yes, but within the same district / No, I live at home
+
+Q18. Multiple choice: "How many people do you share your sleeping room with?" Options: 0 (own room) / 1 / 2 / 3 / 4 or more
+
+Q19. Multiple choice: "How long have you been in your current living arrangement?" Options: Under 6 months / 6–12 months / 1–2 years / Over 2 years
+
+Q20. Multiple choice: "How do you usually get most of your meals?" Options: Cooked at home by family / Hall / dormitory dining or canteen / Mess cook or shared cooking arrangement / I cook for myself / Mostly hotels, restaurants, street food / Mostly online food delivery
+
+Q21. Multiple choice: "Who mainly decides how your day-to-day money is spent?" Options: Entirely me / Mostly me, some family input / Shared roughly equally / Mostly my family / Entirely my family
+
+Q22. Multiple choice: "How often does a family member ask what you spent money on?" Options: Never / Rarely / Sometimes / Often / Always
+
+Q23. Multiple choice: "After an impulse purchase, do you ever hide or downplay it when talking to family?" Options: Regularly / Occasionally / No, I'm open about my spending / Family doesn't ask
+
+Q24. Multiple choice: "Approximate total monthly living cost — rent/hall fee + food + utilities, excluding tuition" Options: Below ৳5,000 / ৳5,000–9,999 / ৳10,000–19,999 / ৳20,000 or above
+
+Q25. Multiple choice: "Has living away from family changed which purchases you now consider 'necessary' vs. 'optional'?" Options: Yes, significantly / Yes, somewhat / No real change / Not applicable (living with family)
+
+SECTION D — COST OF STUDYING:
+
+Q26. Multiple choice: "Roughly how much does your family pay in tuition and fees per semester or year?" Options: Under ৳5,000 / ৳5,000–24,999 / ৳25,000–59,999 / ৳60,000–1,19,999 / ৳1,20,000 and above / Don't know / Prefer not to say
+
+Q27. Multiple choice: "Would you say the cost of your education is a strain on your family?" Options: Not at all / A little / Somewhat / Quite a lot / A great deal / Prefer not to say
+
+Q28. Multiple choice: "Has a public exam, session jam, or semester delay ever affected your financial planning?" Options: Yes, disrupted my budget significantly / Yes, but I adjusted easily / No effect
+
+--- After Section D, add text block: "Deep breath. The next bit is just numbers, and nobody's checking." and below: "একটু দম নিন। সামনেরটা শুধু সংখ্যা, কেউ যাচাই করছে না।" ---
+
+SECTION E — HOUSEHOLD INCOME AND SUPPORT FLOW:
+
+Q29. Multiple choice: "Approximate monthly income of your family household, all earners combined" Options: Below ৳15,000 / ৳15,000–29,999 / ৳30,000–49,999 / ৳50,000–79,999 / ৳80,000–1,49,999 / ৳1,50,000 and above / Don't know / Prefer not to say
+
+Q30. Number input: "How many people depend on that household income, including you?"
+
+Q31. Multiple choice: "Do you support your family financially?" Options: Yes / No
+
+Q32. Multiple choice: "How much of your income goes to your family per month?" Options: Under ৳5,000 / ৳5,000–24,999 / ৳25,000–59,999 / ৳60,000–1,19,999 / ৳1,20,000 and above
+CONDITIONAL LOGIC: Only show Q32 if Q31 = "Yes"
+
+--- After Section E, add text block: "Money talk, survived. No judgement here — we mean that." and below: "টাকার আলাপ পার হয়ে গেল। কেউ বিচার করছে না, সত্যি।" ---
+
+SECTION F — MONEY COMING IN:
+
+Q33. Checkboxes (select all that apply): "Where does your money come from?" Options: Allowance from parents/family / Money sent by a sibling or relative / Remittance from family member abroad / Private tuition (teaching students) / Part-time job / Freelancing / online work / Scholarship or stipend / Small business / reselling / Content creation / Other (with text field)
+
+Q34. Multiple choice: "Roughly how much money do you have available to spend in a typical month — all sources, not counting tuition paid directly by family?" Options: Below ৳2,000 / ৳2,000–4,999 / ৳5,000–7,999 / ৳8,000–11,999 / ৳12,000–19,999 / ৳20,000 and above / Prefer not to say
+
+Q35. Multiple choice: "Is that amount roughly the same each month?" Options: Almost the same / Changes a little / Changes a lot / unpredictable
+
+Q36. Multiple choice: "Does your accommodation cost come out of the money above, or is it paid separately?" Options: Comes out of my money / Paid separately by family / I pay nothing for accommodation / Mixed
+
+Q37. Multiple choice: "Do you spend more in the days right after receiving money (from home, stipend, or salary) compared to the rest of the month?" Options: Significantly more / Somewhat more / I spend uniformly throughout the month / I spend more toward month-end instead
+
+SECTION G — MONEY GOING OUT:
+
+Q38. Checkboxes (select exactly 3, randomize option order): "In a typical month, which three categories take the largest share of your spending?" Options: Food and groceries / Rent / mess or hostel fees / Transport / Mobile data and recharge / Books, printing, photocopies / Coaching, courses, exam fees / Clothes and personal care / Eating out with friends / Online shopping / Subscriptions (streaming, gaming, apps) / Cigarettes / tea stall / Gifts and family contributions / Medical / Savings
+
+Q39. Multiple choice: "Roughly what portion of your monthly money goes to non-essentials — entertainment, eating out, shopping for fun?" Options: Almost none / About a quarter / About half / More than half / Almost all
+
+Q40. Checkboxes (select all that apply): "How do you usually pay?" Options: Cash / bKash / Nagad / Rocket / Debit or credit card / Cash on delivery / Bank transfer
+
+Q41. Multiple choice: "Do you keep any money aside as savings?" Options: Yes, every month / Yes, when I can / I try but it doesn't last / No
+
+Q42. Multiple choice: "Roughly what share of your monthly money do you manage to save?" Options: 1–10% / 11–25% / 26–50% / More than 50%
+CONDITIONAL LOGIC: Only show Q42 if Q41 = "Yes, every month" OR Q41 = "Yes, when I can"
+
+Q43. Multiple choice: "Do you have a joint or informal lending arrangement with friends (borrowing/lending small amounts)?" Options: Yes, frequently, and I don't always track who owes whom / Yes, but I keep careful track / Rarely / Never
+
+Q44. Multiple choice: "Do you feel pressure to spend on group activities (treats, outings, gifts) even when it strains your budget?" Options: Yes, frequently / Sometimes, for close friends only / Rarely / No, I decline when I can't afford it
+
+--- After Section G, add text block: "Your wallet has been through a lot in the last two minutes." and below: "গত দুই মিনিটে আপনার মানিব্যাগের উপর দিয়ে অনেক কিছু গেছে।" ---
+
+SECTION H — BUDGETING DISCIPLINE AND FINANCIAL AWARENESS:
+
+Add a text block before the questions: "For each statement, choose the option closest to you. 1 = Strongly disagree · 2 = Disagree · 3 = Neutral · 4 = Agree · 5 = Strongly agree"
+
+Q45. Linear scale 1 to 5: "I set a budget for my monthly expenses."
+Q46. Linear scale 1 to 5: "I stick to my budget even when I'm tempted to spend more."
+Q47. Linear scale 1 to 5: "I compare prices before making a purchase."
+Q48. Linear scale 1 to 5: "I keep track of my daily spending."
+Q49. Linear scale 1 to 5: "I set money aside for emergencies before spending on things I want."
+Q50. Linear scale 1 to 5: "I pay my bills and dues on time."
+Q51. Linear scale 1 to 5: "I plan my spending in advance for the upcoming month."
+Q52. Linear scale 1 to 5: "I avoid borrowing money to cover everyday expenses."
+Q53. Linear scale 1 to 5: "I feel confident in my ability to manage my own money."
+Q54. Linear scale 1 to 5: "I usually run out of money before the month ends."
+
+Q55. Multiple choice: "Do you know your own monthly spending total within about ৳500 accuracy?" Options: Yes / Roughly within ৳1,000–2,000 / No idea until I check my accounts / No idea and I avoid checking
+
+Q56. Checkboxes (select all that apply): "When money runs short before the month ends, what do you usually do?" Options: Ask family for extra / Borrow from a friend / Use savings / Cut back and manage / Delay a payment / Take extra tuition or work / Prefer not to say
+
+--- Before Section I, add text block: "Confession time. How bad is the Daraz situation, really?" and below: "সত্যি বলার সময়। দারাজের অবস্থা আসলে কতটা খারাপ?" ---
+
+SECTION I — BUYING ONLINE:
+
+Q57. Multiple choice: "How often do you buy something online (Daraz, Facebook page shops, Foodpanda, Chaldal, Pathao, apps, etc.)?" Options: Never / Less than once a month / 1–3 times a month / About once a week / Several times a week / Almost daily
+CONDITIONAL LOGIC: If Q57 = "Never", skip ALL remaining questions in this section (Q58 through Q73) and jump directly to Section J (Q74).
+
+Q58. Checkboxes (select all that apply, randomize option order): "Where do you buy most often?" Options: Daraz / Facebook page or group shops / Instagram sellers / Foodpanda / food delivery / Chaldal or grocery apps / Pathao / Brand websites / AliExpress / international / Other (with text field)
+
+Add a text block: "For each statement, choose the option closest to you. 1 = Strongly disagree · 2 = Disagree · 3 = Neutral · 4 = Agree · 5 = Strongly agree"
+
+Q59. Linear scale 1 to 5: "I sometimes buy things online without planning to."
+Q60. Linear scale 1 to 5: "Discounts, flash sales, or a countdown timer make me buy faster than I normally would."
+Q61. Linear scale 1 to 5: "I have ordered something late at night that I would not have ordered during the day."
+Q62. Linear scale 1 to 5: "Free delivery or a small offer has led me to add extra items to my cart."
+Q63. Linear scale 1 to 5: "I sometimes regret purchases I made online afterward."
+Q64. Linear scale 1 to 5: "Content on social media (Facebook, Instagram, TikTok, etc.) influences my online buying decisions."
+
+Q65. Multiple choice: "Do you use 'buy now, pay later' or installment options more than you originally intended to?" Options: Yes, I use it more than planned / Yes, occasionally more / No, I use it as planned / I've never used installment options
+
+Q66. Multiple choice: "Do you ever add items to an online cart and deliberately wait before buying?" Options: Yes, and it usually stops me from buying / Yes, but I buy it anyway later / No, I buy immediately or not at all / I don't usually shop online
+
+Q67. Multiple choice: "Do you follow 'deal/discount' pages or groups (Facebook, Telegram, etc.) even when you're not planning to buy anything?" Options: Yes, daily / Yes, occasionally / No, but I see them anyway via ads / No, I avoid them
+
+Q68. Multiple choice: "In a typical month, how many unplanned online purchases do you make?" Options: 0 / 1–2 / 3–5 / 6–10 / More than 10
+
+Q69. Multiple choice: "On average, how much do you spend per unplanned online purchase?" Options: Below ৳500 / ৳500–1,499 / ৳1,500–2,999 / ৳3,000 or above
+
+Q70. Checkboxes (select all that apply): "Which categories do you most often impulse-buy online?" Options: Clothing / fashion accessories / Gadgets / electronics / Food delivery / Cosmetics / skincare / Books / stationery / Other (with text field)
+
+Q71. Multiple choice: "Roughly how much time do you spend scrolling shopping apps or seller pages on a normal day?" Options: Almost none / Under 15 minutes / 15–30 minutes / 30–60 minutes / Over an hour
+
+Q72. Multiple choice: "Which is more likely to make you buy something you didn't plan to: seeing a friend/classmate has it, or seeing an ad for it?" Options: Seeing someone I know has it / Seeing an ad / Both equally / Neither affects me
+
+Q73. Multiple choice: "Compared to your close friends, do you think you spend more, less, or about the same?" Options: More than most / Less than most / About the same / I don't know
+
+SECTION J — ATTITUDES TOWARD MONEY:
+
+Add text block: "For each statement, choose the option closest to you. 1 = Strongly disagree · 2 = Disagree · 3 = Neutral · 4 = Agree · 5 = Strongly agree"
+
+Q74. Linear scale 1 to 5: "I often feel stressed or anxious about my financial situation."
+Q75. Linear scale 1 to 5: "My family's financial background influences how carefully I spend money."
+
+--- Before Section K, add text block: "Last stretch. Your result is loading. (Not really. But almost.)" and below: "শেষ ধাপ। রেজাল্ট আসছে। (আসলে না। তবে প্রায়।)" ---
+
+SECTION K — TWO LAST ONES:
+
+Q76. Multiple choice: "Someone hands you ৳5,000 right now, no conditions. What is the first thing you do with it?" Options: Put all of it in savings / Pay off something I owe / Buy something I've been wanting / Spend it with friends / Give it to family / Cover next month's expenses / Something else (with text field)
+
+Q77. Long answer (optional): "What was the last thing you bought online, and what made you buy it?"
+
+Q78. Long answer (optional): "Is there anything else about your living situation or background that shapes how you spend or save money?"
+
+--- End page: Add a text block: "That's everything. Thank you for your time and honesty. If you know other students who would take this, please pass it on." ---
+
+IMPORTANT SETTINGS SUMMARY:
+- Only TWO questions are required: the consent question and Q1. Everything else is optional/skippable.
+- Do NOT make the Likert scale questions (Q45-Q54, Q59-Q64, Q74-Q75) required.
+- Randomize option order on Q38 and Q58.
+- The encouragement text blocks between sections are static text, not questions — they should not collect any response.

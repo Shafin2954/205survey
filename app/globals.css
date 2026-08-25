@@ -1,0 +1,381 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #F6F1EB;
+  --bg-paper: #FFFCF7;
+  --text: #1A1A1A;
+  --text-secondary: #5C5C5C;
+  --text-muted: #8E8E8E;
+  --border: #D9D2C7;
+  --border-light: #E8E2D9;
+  --accent: #1A1A1A;
+  --rule: #C4BAA8;
+
+  --font-serif: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-bangla: 'Hind Siliguri', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.bangla {
+  font-family: var(--font-bangla);
+}
+
+/* ---- Layout ---- */
+
+.container {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 992px) {
+  .container {
+    width: 60%;
+    max-width: 1100px;
+    min-width: 720px;
+  }
+}
+
+.container--wide {
+  max-width: 960px;
+}
+
+.rule {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+.rule--thin {
+  margin: 2rem 0;
+}
+
+/* ---- Typography ---- */
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 2.8rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.body-text {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 540px;
+}
+
+/* ---- Header ---- */
+
+.site-header {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.site-header__title {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-header__right {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---- Buttons ---- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-decoration: none;
+  border: none;
+}
+
+.btn--primary {
+  background: var(--text);
+  color: var(--bg-paper);
+}
+
+.btn--primary:hover {
+  background: #333;
+}
+
+.btn--outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn--outline:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.btn--small {
+  font-size: 0.8rem;
+  padding: 0.45rem 0.9rem;
+}
+
+/* ---- Card (paper-like) ---- */
+
+.card {
+  background: var(--bg-paper);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 2rem;
+}
+
+.card--flush {
+  padding: 0;
+}
+
+/* ---- Survey Page ---- */
+
+.survey-hero {
+  padding: 5rem 0 3rem;
+  text-align: center;
+}
+
+.survey-hero h1 {
+  margin-bottom: 1rem;
+}
+
+.survey-hero .body-text {
+  margin: 0 auto 0.5rem;
+}
+
+.survey-section {
+  padding-bottom: 5rem;
+}
+
+.survey-embed-wrapper {
+  border: none;
+  background: transparent;
+  width: 100%;
+}
+
+/* ---- Result Page ---- */
+
+.result-header {
+  padding: 4rem 0 2rem;
+  text-align: center;
+}
+
+.result-header .label {
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.result-header h1 {
+  margin-bottom: 0.5rem;
+}
+
+.result-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+  padding-bottom: 4rem;
+}
+
+@media (max-width: 800px) {
+  .result-layout {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+}
+
+/* ---- Character Image ---- */
+
+.character-img {
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  display: block;
+  margin: 0 auto;
+  background: var(--bg);
+}
+
+/* ---- Score Bar ---- */
+
+.score-bar {
+  margin-bottom: 1.5rem;
+}
+
+.score-bar__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.score-bar__track {
+  width: 100%;
+  height: 6px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.score-bar__fill {
+  height: 100%;
+  background: var(--text);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.score-bar__note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+
+/* ---- Badge ---- */
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+}
+
+/* ---- Actions Row ---- */
+
+.actions-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ---- Plead character floating on right ---- */
+.plead-floater {
+  position: absolute;
+  left: calc(50% + 200px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+@media (max-width: 960px) {
+  .plead-floater {
+    position: static;
+    transform: none;
+    margin-top: 1.5rem;
+    justify-content: center;
+  }
+}
+
+/* ---- Footer ---- */
+
+.site-footer {
+  border-top: 1px solid var(--border-light);
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---- Modal ---- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.modal-body {
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-paper);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 2rem;
+}
