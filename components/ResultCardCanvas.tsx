@@ -12,7 +12,7 @@ interface ResultCardCanvasProps {
 export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
   archetype,
   badges,
-  surveyUrl = 'stat205-survey.vercel.app',
+  surveyUrl = 'money-personality-survey.netlify.app',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
