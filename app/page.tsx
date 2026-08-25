@@ -1,9 +1,13 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { TallyEmbed } from '@/components/TallyEmbed';
+import { mapTallyPayload } from '@/lib/mapTally';
 
 export default function HomePage() {
+  const router = useRouter();
+
   return (
     <div>
       {/* Hero — just the title, description, and survey */}
@@ -40,11 +44,28 @@ export default function HomePage() {
           <div style={{ marginBottom: '1.5rem' }}>
             <p className="label" style={{ marginBottom: '0.25rem' }}>Take the Survey</p>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              78 questions · ~12 minutes · 100% anonymous · skip anything you like
+              Brief · Less than 10 minutes · 100% anonymous
             </p>
           </div>
 
-          <TallyEmbed />
+          <TallyEmbed
+            onSubmitted={(payload) => {
+              try {
+                sessionStorage.setItem('surveyPayloadRaw', JSON.stringify(payload));
+                const { answers, unmapped } = mapTallyPayload(payload);
+                sessionStorage.setItem('surveyAnswers', JSON.stringify(answers));
+                if (unmapped.length > 0) {
+                  sessionStorage.setItem('surveyUnmapped', JSON.stringify(unmapped));
+                } else {
+                  sessionStorage.removeItem('surveyUnmapped');
+                }
+              } catch {
+                // sessionStorage unavailable (private mode, etc) — /result will
+                // show its "couldn't find your answers" state instead.
+              }
+              router.push('/result');
+            }}
+          />
 
           <p
             style={{

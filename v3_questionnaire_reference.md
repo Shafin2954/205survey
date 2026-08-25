@@ -216,7 +216,7 @@ Thank you for taking part in this study. We are researching how university stude
 **Q43.** 🔹 Do you have a joint or informal lending arrangement with friends (borrowing/lending small amounts)?
 ☐ Yes, frequently, and I don't always track who owes whom ☐ Yes, but I keep careful track ☐ Rarely ☐ Never
 
-**Q44.** 🔹 Do you feel pressure to spend on group activities (treats, outings, gifts) even when it strains your budget?
+**Q44.** 🔹 Do you spend a lot on group activities (treats, outings, gifts) even when it strains your budget?
 ☐ Yes, frequently ☐ Sometimes, for close friends only ☐ Rarely ☐ No, I decline when I can't afford it
 
 ---

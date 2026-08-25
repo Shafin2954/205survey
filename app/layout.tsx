@@ -3,7 +3,7 @@ import './globals.css';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://stat205-survey.vercel.app'),
+  metadataBase: new URL('https://money-personality-survey.netlify.app'),
   title: 'Living Conditions, Background & Financial Behavior — Survey',
   description:
     'A research survey investigating how living arrangement and family background relate to financial habits, budgeting discipline, and online impulse buying among university students in Bangladesh.',

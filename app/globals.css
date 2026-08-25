@@ -337,12 +337,41 @@ h3 {
   pointer-events: none;
 }
 
+.plead-arrow {
+  opacity: 0.9;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+
+.plead-img-wrapper {
+  width: 500px;
+  flex-shrink: 0;
+  margin-left: -120px;
+  position: relative;
+  z-index: 1;
+}
+
 @media (max-width: 960px) {
   .plead-floater {
     position: static;
     transform: none;
     margin-top: 1.5rem;
     justify-content: center;
+    flex-direction: column;
+  }
+
+  .plead-arrow {
+    transform: rotate(75deg);
+    margin-bottom: -1rem;
+    margin-left: 0;
+  }
+
+  .plead-img-wrapper {
+    width: 100%;
+    max-width: 320px;
+    margin-left: 0;
   }
 }
 

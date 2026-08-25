@@ -10,48 +10,99 @@ import { ScoreBreakdown } from '@/components/ScoreBreakdown';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
 
+// Kept only for the explicit `?demo=1` preview link — no longer a silent
+// fallback when a real respondent's answers are missing.
+const DEMO_ANSWERS: SurveyAnswers = {
+  q45: 5, q46: 5, q47: 4, q48: 5, q49: 4, q50: 5, q51: 4, q52: 5, q53: 4, q54: 1,
+  q59: 1, q60: 2, q61: 1, q62: 2, q63: 1, q64: 2,
+  q31: 'Yes',
+  q57: '1–3 times a month',
+};
+
+function previewResult(typeParam: string, badgeParam: string | null): ScoringResult | null {
+  const arch = ARCHETYPES[typeParam];
+  if (!arch) return null;
+
+  const badges: Badge[] = [];
+  if (badgeParam) {
+    badgeParam.split(',').forEach((bId) => {
+      if (BADGES[bId.trim()]) badges.push(BADGES[bId.trim()]);
+    });
+  }
+
+  return {
+    archetype: arch,
+    budgetingScore: 3.8,
+    impulseScore: 2.1,
+    budgetingAnsweredCount: 10,
+    impulseAnsweredCount: 6,
+    isBudgetingValid: true,
+    isImpulseValid: true,
+    isUntouchable: arch.id === 'untouchable',
+    isEnigma: arch.id === 'enigma',
+    matchedReason: `Direct preview: ${arch.name}`,
+    badges,
+    answersSummary: { totalAnswered: 78, completionPercentage: 100 },
+  };
+}
+
+interface DebugInfo {
+  raw: unknown;
+  answers: SurveyAnswers;
+  unmapped: unknown[];
+}
+
 function ResultContent() {
   const searchParams = useSearchParams();
+  const isDebug = searchParams.get('debug') === '1';
 
-  const [result] = useState<ScoringResult>(() => {
+  const [loading, setLoading] = useState(true);
+  const [result, setResult] = useState<ScoringResult | null>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+
+  // Reads sessionStorage, so this must run client-side only (not during the
+  // useState initializer, which also executes on the server during prerender).
+  useEffect(() => {
     const typeParam = searchParams.get('type');
     const badgeParam = searchParams.get('badges');
+    const isDemo = searchParams.get('demo') === '1';
 
-    if (typeParam && ARCHETYPES[typeParam]) {
-      const arch = ARCHETYPES[typeParam];
-      const badges: Badge[] = [];
-      if (badgeParam) {
-        badgeParam.split(',').forEach((bId) => {
-          if (BADGES[bId.trim()]) badges.push(BADGES[bId.trim()]);
-        });
-      }
-      return {
-        archetype: arch,
-        budgetingScore: 3.8,
-        impulseScore: 2.1,
-        budgetingAnsweredCount: 10,
-        impulseAnsweredCount: 6,
-        isBudgetingValid: true,
-        isImpulseValid: true,
-        isUntouchable: arch.id === 'untouchable',
-        isEnigma: arch.id === 'enigma',
-        matchedReason: `Direct preview: ${arch.name}`,
-        badges,
-        answersSummary: { totalAnswered: 78, completionPercentage: 100 },
-      };
+    if (typeParam) {
+      setResult(previewResult(typeParam, badgeParam));
+      setLoading(false);
+      return;
     }
 
-    // Default demo profile
-    const sample: SurveyAnswers = {
-      q45: 5, q46: 5, q47: 4, q48: 5, q49: 4, q50: 5, q51: 4, q52: 5, q53: 4, q54: 1,
-      q59: 1, q60: 2, q61: 1, q62: 2, q63: 1, q64: 2,
-      q31: 'Yes',
-      q57: '1–3 times a month',
-    };
-    return computeSurveyResult(sample);
-  });
+    if (isDemo) {
+      setResult(computeSurveyResult(DEMO_ANSWERS));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const stored = sessionStorage.getItem('surveyAnswers');
+      if (stored) {
+        const answers: SurveyAnswers = JSON.parse(stored);
+        setResult(computeSurveyResult(answers));
+
+        if (isDebug) {
+          const rawStr = sessionStorage.getItem('surveyPayloadRaw');
+          const unmappedStr = sessionStorage.getItem('surveyUnmapped');
+          setDebugInfo({
+            raw: rawStr ? JSON.parse(rawStr) : null,
+            answers,
+            unmapped: unmappedStr ? JSON.parse(unmappedStr) : [],
+          });
+        }
+      }
+    } catch {
+      // Leave result null — the "couldn't find your answers" state below covers it.
+    }
+    setLoading(false);
+  }, [searchParams, isDebug]);
 
   useEffect(() => {
+    if (!result) return;
     try {
       confetti({
         particleCount: 50,
@@ -64,10 +115,51 @@ function ResultContent() {
     } catch {
       // ok
     }
-  }, []);
+  }, [result]);
+
+  if (loading) {
+    return (
+      <div className="container" style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+        Loading your result…
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div className="container" style={{ padding: '4rem 0', textAlign: 'center' }}>
+        <p className="label" style={{ marginBottom: '1rem' }}>No result found</p>
+        <h1 style={{ marginBottom: '1rem' }}>We couldn&apos;t find your answers</h1>
+        <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 2rem' }}>
+          This usually happens if you reloaded this page directly or opened it in a new tab.
+          Please take the survey again to see your money personality result.
+        </p>
+        <Link href="/" className="btn btn--primary">
+          Take the survey
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="container" style={{ paddingTop: '3rem', paddingBottom: '6rem' }}>
+      {isDebug && (
+        <details style={{ marginBottom: '2rem', border: '1px solid var(--border, #ddd)', borderRadius: '8px', padding: '1rem', fontSize: '0.8rem' }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Debug info (?debug=1)</summary>
+          <pre style={{ overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {JSON.stringify(
+              {
+                matchedReason: result.matchedReason,
+                answersSummary: result.answersSummary,
+                debugInfo,
+              },
+              null,
+              2
+            )}
+          </pre>
+        </details>
+      )}
+
       {/* Top back navigation */}
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link href="/" className="btn btn--outline btn--small">
@@ -147,12 +239,12 @@ function ResultContent() {
           <div className="plead-floater">
             {/* Curved Arrow pointing right to the character (higher z-index) */}
             <svg
+              className="plead-arrow"
               width="72"
               height="44"
               viewBox="0 0 72 44"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              style={{ opacity: 0.9, flexShrink: 0, position: 'relative', zIndex: 2 }}
             >
               <path
                 d="M4 28C22 38 46 32 62 14M62 14L48 15M62 14L60 27"
@@ -164,7 +256,7 @@ function ResultContent() {
             </svg>
 
             {/* Plead Character shifted left under the arrow (lower z-index) */}
-            <div style={{ width: '500px', flexShrink: 0, marginLeft: '-120px', position: 'relative', zIndex: 1 }}>
+            <div className="plead-img-wrapper">
               <img
                 src="/plead.png"
                 alt="Please share the survey"

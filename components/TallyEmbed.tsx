@@ -42,7 +42,14 @@ export const TallyEmbed: React.FC<TallyEmbedProps> = ({
           }
         } catch {
           if (e.data.includes?.('Tally.FormSubmitted')) {
-            router.push('/result');
+            // We saw the submission event but couldn't parse a payload out of it.
+            // Let the caller know there are no answers to work with, rather than
+            // silently pretending we captured something.
+            if (onSubmitted) {
+              onSubmitted(null);
+            } else {
+              router.push('/result');
+            }
           }
         }
       }
@@ -53,7 +60,7 @@ export const TallyEmbed: React.FC<TallyEmbedProps> = ({
   }, [router, onSubmitted]);
 
   return (
-    <div className="survey-embed-wrapper">
+    <div className="survey-embed-wrapper" style={{ position: 'relative' }}>
       <iframe
         data-tally-src={`https://tally.so/embed/${formId}?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1`}
         loading="lazy"
@@ -63,7 +70,19 @@ export const TallyEmbed: React.FC<TallyEmbedProps> = ({
         marginHeight={0}
         marginWidth={0}
         title="Living Conditions, Background, and Financial Behavior"
-        style={{ border: 'none', width: '100%', minHeight: '480px' }}
+        style={{ border: 'none', width: '100%' }}
+      />
+      {/* Overlay to hide "Made with Tally" badge which causes mistaken clicks */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '0',
+          right: '0',
+          width: '250px',
+          height: '80px',
+          backgroundColor: 'var(--bg)',
+          zIndex: 10,
+        }}
       />
 
       <Script

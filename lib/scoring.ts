@@ -1,10 +1,9 @@
 import { ARCHETYPES, BADGES } from './archetypes';
 import { Archetype, Badge, ScoringResult, SurveyAnswers } from './types';
 
-export interface ScoringOptions {
-  budgetingThreshold?: number; // default 3.0 (swappable with sample median)
-  impulseThreshold?: number; // default 3.0 (swappable with sample median)
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function parseLikert(val: unknown): number | null {
   if (typeof val === 'number' && val >= 1 && val <= 5) return val;
@@ -15,6 +14,522 @@ function parseLikert(val: unknown): number | null {
   return null;
 }
 
+/** Case-insensitive substring check (null-safe). */
+function includes(val: string | undefined | null, sub: string): boolean {
+  if (!val) return false;
+  return val.toLowerCase().includes(sub.toLowerCase());
+}
+
+/** Check if val exactly equals one of the candidates (case-insensitive, trimmed). */
+function isOneOf(val: string | undefined | null, ...candidates: string[]): boolean {
+  if (!val) return false;
+  const v = val.trim().toLowerCase();
+  return candidates.some(c => c.toLowerCase() === v);
+}
+
+/** Check if an array-type answer includes an item (case-insensitive substring). */
+function arrayIncludes(arr: string[] | undefined | null, sub: string): boolean {
+  if (!Array.isArray(arr)) return false;
+  return arr.some(item => item.toLowerCase().includes(sub.toLowerCase()));
+}
+
+/** Count how many of the given substrings appear in the array. */
+function arrayCountMatches(arr: string[] | undefined | null, subs: string[]): number {
+  if (!Array.isArray(arr)) return 0;
+  let count = 0;
+  for (const sub of subs) {
+    if (arr.some(item => item.toLowerCase().includes(sub.toLowerCase()))) count++;
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
+// Rarity & Tier ordering for tie-breaking
+// ---------------------------------------------------------------------------
+
+const RARITY_ORDER: Record<string, number> = {
+  'Special': 5,
+  'Legendary': 4,
+  'Rare': 3,
+  'Uncommon': 2,
+  'Common': 1,
+};
+
+const TIER_ORDER: Record<string, number> = {
+  'contradiction': 4,
+  'lifestyle': 3,
+  'bonus': 2,
+  'base': 1,
+  'special': 0,
+};
+
+// ---------------------------------------------------------------------------
+// Signal scoring for each archetype
+// ---------------------------------------------------------------------------
+
+interface ArchetypeScore {
+  id: string;
+  points: number;
+  minimum: number;
+  hardRequirementMet: boolean; // If false, archetype cannot trigger even if points are high
+}
+
+function score2amCheckout(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const q61 = parseLikert(a.q61);
+  if (q61 !== null && q61 >= 4) pts += 3;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 >= 4) pts += 2;
+
+  const q60 = parseLikert(a.q60);
+  if (q60 !== null && q60 >= 4) pts += 2;
+
+  if (isOneOf(a.q57, 'Several times a week', 'Almost daily')) pts += 3;
+  else if (isOneOf(a.q57, 'About once a week')) pts += 1;
+
+  if (arrayIncludes(a.q58, 'Daraz')) pts += 1;
+  if (arrayIncludes(a.q38, 'Online shopping')) pts += 2;
+
+  if (isOneOf(a.q71, '30–60 minutes', 'Over an hour', '30-60 minutes')) pts += 2;
+
+  const q45 = parseLikert(a.q45);
+  if (q45 !== null && q45 <= 2) pts += 1;
+
+  const q63 = parseLikert(a.q63);
+  if (q63 !== null && q63 >= 4) pts += 1;
+
+  const q62 = parseLikert(a.q62);
+  if (q62 !== null && q62 >= 4) pts += 1;
+
+  return { id: '2am-checkout', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+function scoreWindowShopper(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (isOneOf(a.q67, 'Yes, daily')) pts += 4;
+  else if (isOneOf(a.q67, 'Yes, occasionally')) pts += 2;
+
+  if (isOneOf(a.q68, '0', '০')) pts += 4;
+  else if (includes(a.q68, '1–2') || includes(a.q68, '1-2')) pts += 1;
+
+  const q59 = parseLikert(a.q59);
+  const q71scrolls = isOneOf(a.q71, '15–30 minutes', '15-30 minutes', '30–60 minutes', '30-60 minutes', 'Over an hour');
+  if (q71scrolls && q59 !== null && q59 <= 2) pts += 3;
+
+  // Low impulse overall
+  const impulseAvg = computeImpulseAvg(a);
+  if (impulseAvg !== null && impulseAvg <= 2.0) pts += 2;
+
+  if (includes(a.q66, 'stops me from buying')) pts += 2;
+
+  const q47 = parseLikert(a.q47);
+  if (q47 !== null && q47 >= 4) pts += 1;
+
+  return { id: 'window-shopper', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+function scoreCartMonk(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (includes(a.q66, 'stops me from buying')) pts += 5;
+  else if (includes(a.q66, 'buy it anyway later')) pts += 2;
+
+  const q47 = parseLikert(a.q47);
+  if (q47 !== null && q47 >= 4) pts += 2;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 <= 2) pts += 2;
+
+  if (isOneOf(a.q57, '1–3 times a month', '1-3 times a month', 'Less than once a month')) pts += 1;
+
+  const q46 = parseLikert(a.q46);
+  if (q46 !== null && q46 >= 4) pts += 1;
+
+  const q63 = parseLikert(a.q63);
+  if (q63 !== null && q63 <= 2) pts += 1;
+
+  return { id: 'cart-monk', points: pts, minimum: 5, hardRequirementMet: true };
+}
+
+function scoreSonOfKing(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (isOneOf(a.q21, 'Mostly my family', 'Entirely my family')) pts += 4;
+
+  if (includes(a.q29, '1,50,000') || includes(a.q29, '80,000')) pts += 3;
+
+  if (includes(a.q34, '20,000') || includes(a.q34, '12,000')) pts += 3;
+
+  // Money from parents only (no earned income)
+  if (Array.isArray(a.q33)) {
+    const earnedSources = ['tuition', 'part-time', 'freelanc', 'business', 'content creation'];
+    const hasEarned = a.q33.some(s => earnedSources.some(e => s.toLowerCase().includes(e)));
+    const hasFamily = a.q33.some(s => s.toLowerCase().includes('parent') || s.toLowerCase().includes('family') || s.toLowerCase().includes('allowance'));
+    if (hasFamily && !hasEarned && a.q33.length <= 2) pts += 3;
+    if (hasFamily && !hasEarned) pts += 2; // even with remittance
+  }
+
+  if (isOneOf(a.q36, 'Paid separately by family')) pts += 2;
+
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null && q54 <= 2) pts += 2;
+
+  const q74 = parseLikert(a.q74);
+  if (q74 !== null && q74 <= 2) pts += 1;
+
+  const q27 = parseLikert(a.q27);
+  if (q27 !== null && q27 <= 2) pts += 1;
+
+  if (isOneOf(a.q76, 'Buy something I\'ve been wanting', 'Spend it with friends')) pts += 1;
+
+  return { id: 'son-of-king', points: pts, minimum: 7, hardRequirementMet: true };
+}
+
+function scoreBankOfFriends(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (includes(a.q43, "don't always track who owes whom") || includes(a.q43, 'frequently')) pts += 5;
+  else if (includes(a.q43, 'careful track')) pts += 2;
+
+  if (arrayIncludes(a.q56, 'Borrow from a friend')) pts += 2;
+
+  if (isOneOf(a.q44, 'Yes, frequently')) pts += 2;
+  else if (includes(a.q44, 'Sometimes')) pts += 1;
+
+  if (arrayIncludes(a.q38, 'Eating out with friends')) pts += 1;
+  if (arrayIncludes(a.q38, 'Gifts')) pts += 1;
+
+  if (!isOneOf(a.q41, 'Yes, every month')) pts += 1;
+
+  return { id: 'bank-of-friends', points: pts, minimum: 5, hardRequirementMet: true };
+}
+
+function scoreHishabi(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const q45 = parseLikert(a.q45);
+  if (q45 !== null && q45 >= 4) pts += 3;
+
+  const q46 = parseLikert(a.q46);
+  if (q46 !== null && q46 >= 4) pts += 3;
+
+  const q48 = parseLikert(a.q48);
+  if (q48 !== null && q48 >= 4) pts += 2;
+
+  const q47 = parseLikert(a.q47);
+  if (q47 !== null && q47 >= 4) pts += 1;
+
+  const q51 = parseLikert(a.q51);
+  if (q51 !== null && q51 >= 4) pts += 2;
+
+  if (isOneOf(a.q55, 'Yes')) pts += 3;
+
+  if (isOneOf(a.q41, 'Yes, every month')) pts += 2;
+
+  const q52 = parseLikert(a.q52);
+  if (q52 !== null && q52 >= 4) pts += 1;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 <= 2) pts += 1;
+
+  if (includes(a.q37, 'uniformly')) pts += 1;
+
+  return { id: 'hishabi', points: pts, minimum: 7, hardRequirementMet: true };
+}
+
+function scorePlanThenPanic(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const q45 = parseLikert(a.q45);
+  if (q45 !== null && q45 >= 4) pts += 3;
+
+  const q46 = parseLikert(a.q46);
+  if (q46 !== null && q46 <= 2) pts += 3;
+
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null && q54 >= 4) pts += 2;
+
+  const q51 = parseLikert(a.q51);
+  if (q51 !== null && q51 >= 3) pts += 1;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 >= 3) pts += 2;
+
+  const q60 = parseLikert(a.q60);
+  if (q60 !== null && q60 >= 3) pts += 1;
+
+  if (includes(a.q55, '1,000') || includes(a.q55, 'Roughly')) pts += 1;
+
+  if (isOneOf(a.q37, 'Somewhat more')) pts += 1;
+
+  return { id: 'plan-then-panic', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+function scoreGhostSpender(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const q48 = parseLikert(a.q48);
+  if (q48 !== null && q48 <= 2) pts += 3;
+
+  const q45 = parseLikert(a.q45);
+  if (q45 !== null && q45 <= 2) pts += 2;
+
+  if (includes(a.q55, 'No idea until I check') || includes(a.q55, 'No idea and I avoid')) pts += 4;
+
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null && q54 >= 3) pts += 2;
+
+  // Not impulsive — money just disappears
+  const q59 = parseLikert(a.q59);
+  const q60 = parseLikert(a.q60);
+  if (q59 !== null && q59 <= 3 && q60 !== null && q60 <= 3) pts += 2;
+
+  if (isOneOf(a.q39, 'About half', 'More than half')) pts += 2;
+
+  if (includes(a.q35, 'unpredictable') || includes(a.q35, 'Changes a lot')) pts += 1;
+
+  if (arrayIncludes(a.q56, 'Cut back and manage')) pts += 1;
+
+  return { id: 'ghost-spender', points: pts, minimum: 5, hardRequirementMet: true };
+}
+
+function scoreDelusionalCFO(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const q53 = parseLikert(a.q53);
+  if (q53 !== null && q53 >= 4) pts += 4;
+
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null && q54 >= 4) pts += 4;
+
+  if (includes(a.q73, 'Less than most')) pts += 3;
+
+  const q48 = parseLikert(a.q48);
+  if (q48 !== null && q48 <= 2) pts += 2;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 >= 3) pts += 1;
+
+  if (!isOneOf(a.q55, 'Yes')) pts += 1;
+
+  if (includes(a.q37, 'Significantly more') || includes(a.q37, 'Somewhat more')) pts += 1;
+
+  return { id: 'delusional-cfo', points: pts, minimum: 7, hardRequirementMet: true };
+}
+
+function scoreHumbleMenace(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (includes(a.q73, 'Less than most')) pts += 4;
+
+  const impulseAvg = computeImpulseAvg(a);
+  if (impulseAvg !== null && impulseAvg >= 3.5) pts += 4;
+  else if (impulseAvg !== null && impulseAvg >= 3.0) pts += 2;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 >= 4) pts += 2;
+
+  if (isOneOf(a.q39, 'About half', 'More than half')) pts += 2;
+
+  if (isOneOf(a.q23, 'Regularly', 'Occasionally')) pts += 2;
+
+  const q63 = parseLikert(a.q63);
+  if (q63 !== null && q63 >= 3) pts += 1;
+
+  const q64 = parseLikert(a.q64);
+  if (q64 !== null && q64 >= 4) pts += 1;
+
+  return { id: 'humble-menace', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+
+
+function scoreFamilyPillar(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+  const supportsFamily = a.q31?.trim().toLowerCase() === 'yes';
+
+  if (supportsFamily) pts += 5;
+
+  if (includes(a.q34, 'Below') || includes(a.q34, '2,000–4,999') || includes(a.q34, '2,000-4,999')) pts += 3;
+  else if (includes(a.q34, '5,000–7,999') || includes(a.q34, '5,000-7,999')) pts += 1;
+
+  const q27 = parseLikert(a.q27);
+  if (q27 !== null && q27 >= 4) pts += 2;
+
+  if (includes(a.q29, 'Below') || includes(a.q29, '15,000–29,999') || includes(a.q29, '15,000-29,999')) pts += 2;
+
+  const q30 = typeof a.q30 === 'number' ? a.q30 : parseInt(String(a.q30), 10);
+  if (!isNaN(q30) && q30 >= 4) pts += 1;
+
+  if (isOneOf(a.q76, 'Give it to family')) pts += 2;
+
+  if (isOneOf(a.q41, 'Yes, when I can', 'I try but it doesn\'t last')) pts += 1;
+
+  const q74 = parseLikert(a.q74);
+  if (q74 !== null && q74 >= 4) pts += 1;
+
+  return { id: 'family-pillar', points: pts, minimum: 7, hardRequirementMet: supportsFamily };
+}
+
+function scoreHustler(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const sourceCount = Array.isArray(a.q33) ? a.q33.length : 0;
+  if (sourceCount >= 3) pts += 5;
+  else if (sourceCount === 2) pts += 2;
+
+  // Count earned income sources
+  const earnedKeywords = ['tuition', 'part-time', 'freelanc', 'business', 'content creation'];
+  const earnedCount = arrayCountMatches(a.q33, earnedKeywords);
+  if (earnedCount >= 2) pts += 2;
+  if (earnedCount >= 1) pts += 3;
+
+  if (arrayIncludes(a.q56, 'Take extra tuition') || arrayIncludes(a.q56, 'extra tuition or work')) pts += 2;
+
+  if (isOneOf(a.q21, 'Entirely me')) pts += 1;
+
+  if (includes(a.q35, 'unpredictable') || includes(a.q35, 'Changes a lot')) pts += 1;
+
+  return { id: 'hustler', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+function scorePaydayPhenomenon(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (includes(a.q37, 'Significantly more')) pts += 5;
+  else if (includes(a.q37, 'Somewhat more')) pts += 2;
+
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null && q54 >= 4) pts += 3;
+  else if (q54 !== null && q54 === 3) pts += 1;
+
+  if (isOneOf(a.q41, 'I try but it doesn\'t last', 'No')) pts += 2;
+
+  if (includes(a.q35, 'unpredictable') || includes(a.q35, 'Changes a lot')) pts += 1;
+
+  if (isOneOf(a.q39, 'About half', 'More than half')) pts += 1;
+
+  if (arrayIncludes(a.q38, 'Eating out with friends')) pts += 1;
+
+  return { id: 'pay-day-phenomenon', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+
+
+function scoreCashPurist(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  const hasCash = arrayIncludes(a.q40, 'Cash');
+  if (Array.isArray(a.q40) && a.q40.length === 1 && hasCash) pts += 6;
+  else if (Array.isArray(a.q40) && a.q40.length === 2 && hasCash) pts += 2;
+
+  if (isOneOf(a.q57, 'Never')) pts += 3;
+  else if (isOneOf(a.q57, 'Less than once a month')) pts += 1;
+
+  if (includes(a.q65, 'never used installment')) pts += 2;
+
+  const q64 = parseLikert(a.q64);
+  if (q64 !== null && q64 <= 2) pts += 1;
+
+  if (isOneOf(a.q9, 'Rural (village)', 'Rural')) pts += 1;
+
+  return { id: 'cash-purist', points: pts, minimum: 6, hardRequirementMet: hasCash };
+}
+
+function scoreSurvivor(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (includes(a.q28, 'disrupted my budget significantly')) pts += 5;
+
+  const q27 = parseLikert(a.q27);
+  if (q27 !== null && q27 >= 4) pts += 3;
+
+  if (includes(a.q29, 'Below') || includes(a.q29, '15,000–29,999') || includes(a.q29, '15,000-29,999')) pts += 2;
+
+  if (includes(a.q34, 'Below') || includes(a.q34, '2,000–4,999') || includes(a.q34, '2,000-4,999')) pts += 2;
+
+  const q74 = parseLikert(a.q74);
+  if (q74 !== null && q74 >= 4) pts += 2;
+
+  if (arrayIncludes(a.q56, 'Ask family for extra')) pts += 1;
+  if (arrayIncludes(a.q56, 'Delay a payment')) pts += 1;
+
+  if (includes(a.q35, 'unpredictable') || includes(a.q35, 'Changes a lot')) pts += 1;
+
+  return { id: 'survivor', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+function scoreCashHoarder(a: SurveyAnswers): ArchetypeScore {
+  let pts = 0;
+
+  if (isOneOf(a.q41, 'Yes, every month')) pts += 4;
+
+  if (includes(a.q42, '26–50%') || includes(a.q42, '26-50%') || includes(a.q42, 'More than 50%')) pts += 4;
+  else if (includes(a.q42, '11–25%') || includes(a.q42, '11-25%')) pts += 1;
+
+  if (isOneOf(a.q76, 'Put all of it in savings')) pts += 3;
+
+  if (isOneOf(a.q39, 'Almost none')) pts += 2;
+
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null && q54 <= 2) pts += 2;
+
+  const q59 = parseLikert(a.q59);
+  if (q59 !== null && q59 <= 2) pts += 1;
+
+  const q49 = parseLikert(a.q49);
+  if (q49 !== null && q49 >= 4) pts += 1;
+
+  return { id: 'cash-hoarder', points: pts, minimum: 6, hardRequirementMet: true };
+}
+
+// ---------------------------------------------------------------------------
+// Compute impulse average (reused in multiple scorers)
+// ---------------------------------------------------------------------------
+
+function computeImpulseAvg(a: SurveyAnswers): number | null {
+  const keys: Array<keyof SurveyAnswers> = ['q59', 'q60', 'q61', 'q62', 'q63', 'q64'];
+  let sum = 0;
+  let count = 0;
+  for (const k of keys) {
+    const v = parseLikert(a[k]);
+    if (v !== null) { sum += v; count++; }
+  }
+  return count >= 4 ? Number((sum / count).toFixed(2)) : null;
+}
+
+function computeBudgetAvg(a: SurveyAnswers): { score: number | null; answered: number } {
+  const straightKeys: Array<keyof SurveyAnswers> = [
+    'q45', 'q46', 'q47', 'q48', 'q49', 'q50', 'q51', 'q52', 'q53'
+  ];
+  let sum = 0;
+  let answered = 0;
+
+  for (const k of straightKeys) {
+    const v = parseLikert(a[k]);
+    if (v !== null) { sum += v; answered++; }
+  }
+
+  // Q54 is reverse scored
+  const q54 = parseLikert(a.q54);
+  if (q54 !== null) { sum += (6 - q54); answered++; }
+
+  const valid = answered >= 6;
+  return { score: valid ? Number((sum / answered).toFixed(2)) : null, answered };
+}
+
+// ---------------------------------------------------------------------------
+// Main scoring function
+// ---------------------------------------------------------------------------
+
+export interface ScoringOptions {
+  budgetingThreshold?: number;
+  impulseThreshold?: number;
+}
+
 export function computeSurveyResult(
   answers: SurveyAnswers,
   options?: ScoringOptions
@@ -22,90 +537,51 @@ export function computeSurveyResult(
   const budgetThreshold = options?.budgetingThreshold ?? 3.4;
   const impulseThreshold = options?.impulseThreshold ?? 2.8;
 
-  // 1. Budgeting Score items (Q45..Q53 straight, Q54 reverse)
-  const budgetStraightKeys: Array<keyof SurveyAnswers> = [
-    'q45', 'q46', 'q47', 'q48', 'q49', 'q50', 'q51', 'q52', 'q53'
-  ];
-  let budgetSum = 0;
-  let budgetAnswered = 0;
-
-  for (const k of budgetStraightKeys) {
-    const parsed = parseLikert(answers[k]);
-    if (parsed !== null) {
-      budgetSum += parsed;
-      budgetAnswered++;
-    }
-  }
-
-  // Q54 is reverse scored: 6 - score
-  const q54Raw = parseLikert(answers.q54);
-  if (q54Raw !== null) {
-    budgetSum += (6 - q54Raw);
-    budgetAnswered++;
-  }
-
+  // --- Compute raw scores (still useful for display & fallback) ---
+  const budget = computeBudgetAvg(answers);
+  const budgetingScore = budget.score;
+  const budgetAnswered = budget.answered;
   const isBudgetingValid = budgetAnswered >= 6;
-  const budgetingScore = isBudgetingValid ? Number((budgetSum / budgetAnswered).toFixed(2)) : null;
 
-  // 2. Online Impulse Score items (Q59..Q64 straight)
-  const impulseKeys: Array<keyof SurveyAnswers> = [
-    'q59', 'q60', 'q61', 'q62', 'q63', 'q64'
-  ];
-  let impulseSum = 0;
+  const impulseKeys: Array<keyof SurveyAnswers> = ['q59', 'q60', 'q61', 'q62', 'q63', 'q64'];
   let impulseAnswered = 0;
-
   for (const k of impulseKeys) {
-    const parsed = parseLikert(answers[k]);
-    if (parsed !== null) {
-      impulseSum += parsed;
-      impulseAnswered++;
-    }
+    if (parseLikert(answers[k]) !== null) impulseAnswered++;
   }
-
   const isImpulseValid = impulseAnswered >= 4;
-  const impulseScore = isImpulseValid ? Number((impulseSum / impulseAnswered).toFixed(2)) : null;
+  const impulseScore = computeImpulseAvg(answers);
 
-  // 3. Q57 Gate Check ("Never" shops online)
-  const isNeverOnlineShopper = answers.q57?.trim().toLowerCase() === 'never';
-
-  // 4. Badges (Missing safe)
+  // --- Badges (unchanged) ---
   const badges: Badge[] = [];
   if (answers.q31?.trim().toLowerCase() === 'yes') {
     badges.push(BADGES['safety-net']);
   }
   if (
-    answers.q23 === 'Regularly' ||
-    answers.q23 === 'Occasionally' ||
-    answers.q23?.toLowerCase().includes('regularly') ||
-    answers.q23?.toLowerCase().includes('occasionally')
+    isOneOf(answers.q23, 'Regularly', 'Occasionally') ||
+    includes(answers.q23, 'regularly') ||
+    includes(answers.q23, 'occasionally')
   ) {
     badges.push(BADGES['secret-shopper']);
   }
   if (
-    answers.q65 === 'Yes, I use it more than planned' ||
-    answers.q65?.toLowerCase().includes('more than planned')
+    includes(answers.q65, 'more than planned')
   ) {
     badges.push(BADGES['emi-enthusiast']);
   }
 
-  // Calculate completion percentage
-  const totalKeys = Object.keys(answers).length;
+  // --- Completion ---
   const totalAnswered = Object.values(answers).filter(v => v !== undefined && v !== null && v !== '').length;
   const completionPercentage = Math.min(100, Math.round((totalAnswered / 78) * 100));
 
-  // Determine Archetype
-  let matchedArchetype: Archetype;
-  let matchedReason = '';
-
-  // Gate 1: Q57 = "Never" -> Untouchable
+  // --- HARD GATE 1: Untouchable (Q57 = "Never") ---
+  const isNeverOnlineShopper = answers.q57?.trim().toLowerCase() === 'never';
   if (isNeverOnlineShopper) {
-    matchedArchetype = { ...ARCHETYPES['untouchable'] };
+    const arch = { ...ARCHETYPES['untouchable'] };
     if (isBudgetingValid && budgetingScore !== null && budgetingScore >= budgetThreshold) {
-      matchedArchetype.subLine = '...and your budgeting discipline is strong too, which frankly feels unfair.';
+      arch.subLine = '...and your budgeting discipline is strong too, which frankly feels unfair.';
     }
-    matchedReason = 'Never shops online (Q57 Gate)';
     return {
-      archetype: matchedArchetype,
+      archetype: arch,
       budgetingScore,
       impulseScore: null,
       budgetingAnsweredCount: budgetAnswered,
@@ -114,14 +590,14 @@ export function computeSurveyResult(
       isImpulseValid: false,
       isUntouchable: true,
       isEnigma: false,
-      matchedReason,
+      matchedReason: 'Never shops online (Q57 Gate)',
       badges,
       answersSummary: { totalAnswered, completionPercentage },
     };
   }
 
-  // Gate 2: Score Validity Check (Fallback: The Enigma)
-  if (!isBudgetingValid || (!isNeverOnlineShopper && !isImpulseValid)) {
+  // --- HARD GATE 2: Enigma (insufficient answers) ---
+  if (!isBudgetingValid || !isImpulseValid) {
     return {
       archetype: ARCHETYPES['enigma'],
       budgetingScore,
@@ -138,310 +614,66 @@ export function computeSurveyResult(
     };
   }
 
-  // Safe non-null scores for subsequent evaluation
+  // --- HEURISTIC SCORING: All archetypes compete simultaneously ---
+  const allScores: ArchetypeScore[] = [
+    scoreDelusionalCFO(answers),
+    scoreHumbleMenace(answers),
+    scoreFamilyPillar(answers),
+    scoreHustler(answers),
+    scoreBankOfFriends(answers),
+    scoreWindowShopper(answers),
+    scoreCartMonk(answers),
+    scorePaydayPhenomenon(answers),
+    scoreCashPurist(answers),
+    scoreSurvivor(answers),
+    scoreCashHoarder(answers),
+    scoreSonOfKing(answers),
+    score2amCheckout(answers),
+    scorePlanThenPanic(answers),
+    scoreGhostSpender(answers),
+    scoreHishabi(answers),
+  ];
+
+  // Filter: only archetypes that meet minimum AND hard requirements
+  const qualifying = allScores.filter(s => s.points >= s.minimum && s.hardRequirementMet);
+
+  // Sort by points desc, then rarity desc, then tier desc
+  qualifying.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    const archA = ARCHETYPES[a.id];
+    const archB = ARCHETYPES[b.id];
+    const rarityDiff = (RARITY_ORDER[archB.rarity] || 0) - (RARITY_ORDER[archA.rarity] || 0);
+    if (rarityDiff !== 0) return rarityDiff;
+    return (TIER_ORDER[archB.tier] || 0) - (TIER_ORDER[archA.tier] || 0);
+  });
+
+  if (qualifying.length > 0) {
+    const winner = qualifying[0];
+    const arch = ARCHETYPES[winner.id];
+    return {
+      archetype: arch,
+      budgetingScore,
+      impulseScore,
+      budgetingAnsweredCount: budgetAnswered,
+      impulseAnsweredCount: impulseAnswered,
+      isBudgetingValid,
+      isImpulseValid,
+      isUntouchable: false,
+      isEnigma: false,
+      matchedReason: `Heuristic match: ${arch.name} (${winner.points} pts, min ${winner.minimum})`,
+      badges,
+      answersSummary: { totalAnswered, completionPercentage },
+    };
+  }
+
+  // --- FALLBACK: Base 2×2 grid ---
   const bScore = budgetingScore!;
   const iScore = impulseScore!;
-
-  // 5. Tier 1: Contradiction Hidden Types (Strict Priority Order)
-  const q53 = parseLikert(answers.q53);
-  const q54 = parseLikert(answers.q54);
-  const q45 = parseLikert(answers.q45);
-  const q46 = parseLikert(answers.q46);
-  const q48 = parseLikert(answers.q48);
-
-  // 1. Delusional CFO: High confidence (Q53 >= 4) AND runs out of money (Q54 >= 4)
-  if (q53 !== null && q53 >= 4 && q54 !== null && q54 >= 4) {
-    return {
-      archetype: ARCHETYPES['delusional-cfo'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Contradiction: Confident in money management but runs out before month-end (Q53 & Q54)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 2. Humble Menace: Thinks they spend less than peers (Q73 = Less than most) but Impulse >= 4.0
-  if (
-    answers.q73?.toLowerCase().includes('less than most') &&
-    iScore >= 4.0
-  ) {
-    return {
-      archetype: ARCHETYPES['humble-menace'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Contradiction: Thinks they spend less than peers but has extreme impulse score (Q73 & Impulse >= 4.0)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 3. The Theorist: Makes a budget (Q45 >= 4) but does not stick (Q46 <= 2) and does not track (Q48 <= 2)
-  if (
-    q45 !== null && q45 >= 4 &&
-    q46 !== null && q46 <= 2 &&
-    q48 !== null && q48 <= 2
-  ) {
-    return {
-      archetype: ARCHETYPES['theorist'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Contradiction: Makes budget plans but never sticks or tracks daily spending (Q45, Q46, Q48)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 6. Tier 2: Lifestyle Hidden Types (Strict Priority Order)
-
-  // 4. The Family Pillar: Supports family (Q31 = Yes) on bottom 2 income brackets (Q34 below 5,000 BDT)
-  if (
-    answers.q31?.trim().toLowerCase() === 'yes' &&
-    (answers.q34?.includes('Below ৳2,000') || answers.q34?.includes('৳2,000–4,999') || answers.q34?.toLowerCase().includes('below ৳2,000') || answers.q34?.toLowerCase().includes('2,000'))
-  ) {
-    return {
-      archetype: ARCHETYPES['family-pillar'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Supports family on tight personal budget under ৳5,000 (Q31 & Q34)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 5. The Hustler: >= 3 income sources (Q33)
-  if (Array.isArray(answers.q33) && answers.q33.length >= 3) {
-    return {
-      archetype: ARCHETYPES['hustler'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: 3+ independent income sources (Q33)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 6. The Bank of Friends: Frequently lends without tracking who owes whom (Q43)
-  if (
-    answers.q43?.includes("don't always track who owes whom") ||
-    answers.q43?.toLowerCase().includes('frequently')
-  ) {
-    return {
-      archetype: ARCHETYPES['bank-of-friends'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Frequently lends money to friends without tracking (Q43)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 7. The Window Shopper: Follows deal pages daily/occasionally (Q67) but makes 0 unplanned buys (Q68 = 0)
-  if (
-    (answers.q67?.includes('Yes, daily') || answers.q67?.includes('Yes, occasionally')) &&
-    (answers.q68 === '0' || answers.q68 === '০' || answers.q68?.includes('0'))
-  ) {
-    return {
-      archetype: ARCHETYPES['window-shopper'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Follows deal pages but makes 0 unplanned purchases (Q67 & Q68)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 8. The Cart Monk: Adds to cart and waits, which stops buying (Q66)
-  if (answers.q66?.includes('stops me from buying')) {
-    return {
-      archetype: ARCHETYPES['cart-monk'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Uses cart-waiting technique to prevent impulse buying (Q66)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 9. The Payday Phenomenon: Spends significantly more right after money arrives (Q37) and runs out (Q54 >= 4)
-  if (
-    answers.q37?.includes('Significantly more') &&
-    q54 !== null && q54 >= 4
-  ) {
-    return {
-      archetype: ARCHETYPES['pay-day-phenomenon'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Spends significantly more after receiving money and runs out (Q37 & Q54)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 10. The Copycat: Influenced by seeing friends/classmates with items (Q72) with high impulse
-  if (
-    answers.q72?.includes('Seeing someone I know has it') &&
-    iScore >= 3.5
-  ) {
-    return {
-      archetype: ARCHETYPES['copycat'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Buys when peers have items (Q72 & high impulse)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 11. The Cash Purist: Only uses cash (Q40 = ["Cash"])
-  if (
-    Array.isArray(answers.q40) &&
-    answers.q40.length === 1 &&
-    answers.q40[0]?.trim().toLowerCase() === 'cash'
-  ) {
-    return {
-      archetype: ARCHETYPES['cash-purist'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Operates exclusively with physical cash notes (Q40)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 12. The Survivor: Session jam / exam delay disrupted budget (Q28) and education cost is a strain (Q27 >= 4)
-  const q27 = parseLikert(answers.q27);
-  if (
-    answers.q28?.includes('disrupted my budget significantly') &&
-    q27 !== null && q27 >= 4
-  ) {
-    return {
-      archetype: ARCHETYPES['survivor'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Lifestyle: Session jam disrupted budget under education cost strain (Q28 & Q27)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 13. Bonus: The Cash Hoarder (Saves >25% or >50% every month)
-  if (
-    answers.q41 === 'Yes, every month' &&
-    (answers.q42?.includes('26–50%') || answers.q42?.includes('More than 50%'))
-  ) {
-    return {
-      archetype: ARCHETYPES['cash-hoarder'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Bonus: Consistently saves >25% of all income every month (Q41 & Q42)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 14. Bonus: The Son of King (High budget/income handled entirely by family)
-  if (
-    (answers.q34?.includes('৳20,000') || answers.q29?.includes('৳1,50,000')) &&
-    (answers.q21?.includes('Entirely my family') || answers.q21?.includes('Mostly my family'))
-  ) {
-    return {
-      archetype: ARCHETYPES['son-of-king'],
-      budgetingScore,
-      impulseScore,
-      budgetingAnsweredCount: budgetAnswered,
-      impulseAnsweredCount: impulseAnswered,
-      isBudgetingValid,
-      isImpulseValid,
-      isUntouchable: false,
-      isEnigma: false,
-      matchedReason: 'Bonus: High financial cushion with family managing spending decisions (Q34/Q29 & Q21)',
-      badges,
-      answersSummary: { totalAnswered, completionPercentage },
-    };
-  }
-
-  // 7. Base 2x2 Grid Fallback
   const isHighBudget = bScore >= budgetThreshold;
   const isHighImpulse = iScore >= impulseThreshold;
+
+  let matchedArchetype: Archetype;
+  let matchedReason: string;
 
   if (isHighBudget && !isHighImpulse) {
     matchedArchetype = ARCHETYPES['hishabi'];
