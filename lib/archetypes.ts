@@ -72,7 +72,7 @@ export const ARCHETYPES: Record<string, Archetype> = {
   enigma: {
     id: 'enigma',
     name: 'The Enigma',
-    banglaName: 'দ্য এনিগমা',
+    banglaName: 'দ্যা এনিগমা',
     tagline: 'You skipped the questions. Respect. We know nothing.',
     banglaTagline: 'প্রশ্ন স্কিপ করেছেন? দারুণ। আমরা কিছুই জানি না!',
     blurb: 'You gave us just enough to say thank you and absolutely nothing more. Genuinely, that is a personality type, and honestly it might be the smartest one here.',
@@ -129,7 +129,7 @@ export const ARCHETYPES: Record<string, Archetype> = {
   hustler: {
     id: 'hustler',
     name: 'The Hustler',
-    banglaName: 'দ্য হাসলার',
+    banglaName: 'দ্যা হাসলার',
     tagline: 'Three income streams and a 9AM class.',
     banglaTagline: 'তিনটি ইনকাম সোর্স, সাথে সকাল ৯টার ক্লাস।',
     blurb: "Tuition in the morning, freelancing at night, and something else on the side you'd rather not explain. You don't have a budget, you have an enterprise.",
@@ -168,7 +168,7 @@ export const ARCHETYPES: Record<string, Archetype> = {
   'cart-monk': {
     id: 'cart-monk',
     name: 'The Cart Monk',
-    banglaName: 'দ্য কার্ট মঙ্ক',
+    banglaName: 'দ্যা কার্ট মঙ্ক',
     tagline: 'Adds to cart. Waits. Wins.',
     banglaTagline: 'কার্টে যোগ করে অপেক্ষা। শেষমেশ জয়ী।',
     blurb: "You've weaponised the waiting period. Items go in the cart and simply expire there. The discipline is genuinely upsetting to the rest of us.",
@@ -208,7 +208,7 @@ export const ARCHETYPES: Record<string, Archetype> = {
   survivor: {
     id: 'survivor',
     name: 'The Survivor',
-    banglaName: 'দ্য সারভাইভার',
+    banglaName: 'দ্যা সারভাইভার',
     tagline: 'The session jam took the budget with it.',
     banglaTagline: 'সেশন জট গেল, বাজেটও সাথে নিয়ে গেল।',
     blurb: 'Your financial planning has been repeatedly rearranged by forces entirely outside your control. You have adapted more times than any student budget should have to.',

@@ -13,8 +13,8 @@ import Link from 'next/link';
 // Kept only for the explicit `?demo=1` preview link — no longer a silent
 // fallback when a real respondent's answers are missing.
 const DEMO_ANSWERS: SurveyAnswers = {
-  q45: 5, q46: 5, q47: 4, q48: 5, q49: 4, q50: 5, q51: 4, q52: 5, q53: 4, q54: 1,
-  q59: 1, q60: 2, q61: 1, q62: 2, q63: 1, q64: 2,
+  q45: 5, q46: 5, q48: 5, q53: 4, q54: 1,
+  q59: 1, q60: 2, q61: 1, q63: 1, q64: 2,
   q31: 'Yes',
   q57: '1–3 times a month',
 };
@@ -34,15 +34,15 @@ function previewResult(typeParam: string, badgeParam: string | null): ScoringRes
     archetype: arch,
     budgetingScore: 3.8,
     impulseScore: 2.1,
-    budgetingAnsweredCount: 10,
-    impulseAnsweredCount: 6,
+    budgetingAnsweredCount: 5,
+    impulseAnsweredCount: 5,
     isBudgetingValid: true,
     isImpulseValid: true,
     isUntouchable: arch.id === 'untouchable',
     isEnigma: arch.id === 'enigma',
     matchedReason: `Direct preview: ${arch.name}`,
     badges,
-    answersSummary: { totalAnswered: 78, completionPercentage: 100 },
+    answersSummary: { totalAnswered: 40, completionPercentage: 100 },
   };
 }
 

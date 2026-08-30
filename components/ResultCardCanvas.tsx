@@ -9,6 +9,90 @@ interface ResultCardCanvasProps {
   surveyUrl?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Font specs used by the canvas below. Declared once here and referenced by
+// both `ensureFonts` (to explicitly request each face, by name+weight+style
+// AND the real text it will render) and the `ctx.font = ...` assignments in
+// `drawCard`, so the two can never drift out of sync.
+// ---------------------------------------------------------------------------
+const FONT_HEADER = '600 18px "Inter", sans-serif';
+const FONT_IMG_FALLBACK = '400 32px "DM Serif Display", Georgia, serif';
+const FONT_NAME = '400 58px "DM Serif Display", Georgia, serif';
+const FONT_BANGLA = '600 32px "Hind Siliguri", sans-serif';
+const FONT_TAGLINE = 'italic 400 26px "DM Serif Display", Georgia, serif';
+const FONT_BLURB = '400 22px "Inter", sans-serif';
+const FONT_BADGE = '500 18px "Inter", sans-serif';
+const FONT_FOOTER = '600 20px "Inter", sans-serif';
+const FONT_FOOTER_SUB = '400 15px "Inter", sans-serif';
+
+/**
+ * `document.fonts.ready` alone isn't enough here: it only resolves once
+ * fonts that were ALREADY requested finish loading, and nothing in this
+ * app's DOM ever renders italic "DM Serif Display" or weight-600 "Hind
+ * Siliguri" — only the canvas asks for those exact faces, so `.ready` can
+ * resolve before they've ever been triggered.
+ *
+ * Worse, `FontFaceSet.load(spec)` defaults its match-text to a single space.
+ * For a font served as Unicode-range subsets (Google Fonts splits "Hind
+ * Siliguri" into bengali/latin/latin-ext files), a space only matches the
+ * Latin subset — so a bare `.load(spec)` call can "succeed" having loaded
+ * zero Bangla glyphs. Passing the real text each font will render is what
+ * actually guarantees the right subset is fetched before we measure/draw
+ * with it (which is what was producing mismatched word-wrap/positioning
+ * between draws — see the effect below for the other half of that bug).
+ */
+async function ensureFonts(pairs: Array<[spec: string, text: string]>): Promise<void> {
+  try {
+    await Promise.allSettled(pairs.map(([spec, text]) => document.fonts.load(spec, text || ' ')));
+    await document.fonts.ready; // safety net for anything the DOM itself already triggered
+  } catch {
+    // Draw with whatever the browser has rather than fail the whole card.
+  }
+}
+
+/** Loads an image without ever touching the canvas from inside the event
+ * handlers — resolves `null` on error or cancellation instead of rejecting,
+ * so the caller can draw a fallback without a try/catch, and so an aborted
+ * draw can never leave `drawCard` permanently suspended. */
+function loadImage(src: string, signal: AbortSignal): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    signal.addEventListener('abort', () => resolve(null), { once: true });
+    img.src = src; // set after the handlers are attached
+  });
+}
+
+/** Greedy word-wrap. Draws each line as it's completed and returns the Y
+ * position just below the last line (including one trailing lineHeight of
+ * gap), so callers can chain `curY = wrapText(...)`. */
+function wrapText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number
+): number {
+  const words = text.split(' ');
+  let line = '';
+  let cy = y;
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i] + ' ';
+    if (context.measureText(test).width > maxWidth && i > 0) {
+      context.fillText(line.trim(), x, cy);
+      line = words[i] + ' ';
+      cy += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  context.fillText(line.trim(), x, cy);
+  return cy + lineHeight;
+}
+
 export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
   archetype,
   badges,
@@ -17,7 +101,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
 
-  const drawCard = async () => {
+  const drawCard = async (signal: AbortSignal) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -26,11 +110,45 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
     // Fixed canvas dimensions for high-res crisp export
     const W = 1408;
     const H = 1420;
+
+    // ---- character illustration (native 1408x768 aspect ratio preserved) ----
+    const imgMargin = 64;
+    const imgW = W - imgMargin * 2; // 1280px
+    const imgH = (imgW * 768) / 1408; // exactly 698.18px, perfect 1408x768 aspect ratio
+
+    // Load the character image and every font face this draw will need in
+    // parallel. Neither touches the canvas yet — that's deliberate: it's
+    // what lets a superseded call bail out cleanly below instead of leaving
+    // partial work for the next call to paint over.
+    const imgPromise = loadImage(archetype.imagePath, signal);
+    const fontsPromise = ensureFonts([
+      [FONT_HEADER, 'YOUR MONEY PERSONALITY'],
+      [FONT_IMG_FALLBACK, archetype.name],
+      [FONT_NAME, archetype.name],
+      [FONT_BANGLA, archetype.banglaName],
+      [FONT_TAGLINE, `“${archetype.tagline}”`],
+      [FONT_BLURB, archetype.blurb],
+      [FONT_BADGE, badges.map((b) => b.name).join(' ') || ' '],
+      [FONT_FOOTER, `Take the survey → ${surveyUrl}`],
+      [FONT_FOOTER_SUB, 'Living Conditions & Financial Behavior Study · Demography Research 2026'],
+    ]);
+    const [charImg] = await Promise.all([imgPromise, fontsPromise]);
+
+    // Bail if this draw was superseded (new props, or the component
+    // unmounted) while we were loading fonts/image. This is the ONLY guard
+    // needed: everything below is synchronous, so once we're past it, no
+    // other in-flight call can interleave its own drawing with ours — JS is
+    // single-threaded, and we never await again until the next effect run.
+    if (signal.aborted || canvasRef.current !== canvas) return;
+
+    // ---- synchronous drawing burst starts here ----
+
+    // Setting width/height (even to the same value) resets the bitmap, so
+    // this doubles as our clear. Doing it here instead of at the top of the
+    // function means the previous card stays on screen for the full
+    // font/image loading wait instead of flashing blank on every redraw.
     canvas.width = W;
     canvas.height = H;
-
-    // Ensure all custom fonts (including Bengali & serif) are loaded
-    await document.fonts.ready;
 
     // ---- background: warm paper ----
     ctx.fillStyle = '#FAF7F0';
@@ -49,7 +167,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     // ---- header label ----
     ctx.fillStyle = '#8E8E8E';
-    ctx.font = '600 18px "Inter", sans-serif';
+    ctx.font = FONT_HEADER;
     ctx.letterSpacing = '4px';
     ctx.fillText('YOUR MONEY PERSONALITY', W / 2, curY);
 
@@ -64,57 +182,44 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     curY += 28;
 
-    // ---- character illustration (native 1408x768 aspect ratio preserved) ----
-    const imgMargin = 64;
-    const imgW = W - imgMargin * 2; // 1280px
-    const imgH = (imgW * 768) / 1408; // exactly 698.18px, perfect 1408x768 aspect ratio
+    // ---- character illustration ----
+    if (charImg) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(imgMargin, curY, imgW, imgH, 8);
+      ctx.clip();
+      ctx.fillStyle = '#F0EBE3';
+      ctx.fillRect(imgMargin, curY, imgW, imgH);
+      ctx.drawImage(charImg, imgMargin, curY, imgW, imgH);
+      ctx.restore();
 
-    const charImg = new Image();
-    charImg.crossOrigin = 'anonymous';
-    charImg.src = archetype.imagePath;
-
-    await new Promise<void>((resolve) => {
-      charImg.onload = () => {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(imgMargin, curY, imgW, imgH, 8);
-        ctx.clip();
-        ctx.fillStyle = '#F0EBE3';
-        ctx.fillRect(imgMargin, curY, imgW, imgH);
-        ctx.drawImage(charImg, imgMargin, curY, imgW, imgH);
-        ctx.restore();
-
-        // subtle border frame
-        ctx.strokeStyle = '#D9D2C7';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(imgMargin, curY, imgW, imgH, 8);
-        ctx.stroke();
-
-        resolve();
-      };
-      charImg.onerror = () => {
-        ctx.fillStyle = '#F0EBE3';
-        ctx.fillRect(imgMargin, curY, imgW, imgH);
-        ctx.fillStyle = '#8E8E8E';
-        ctx.font = '400 32px "DM Serif Display", Georgia, serif';
-        ctx.fillText(archetype.name, W / 2, curY + imgH / 2 - 16);
-        resolve();
-      };
-    });
+      // subtle border frame
+      ctx.strokeStyle = '#D9D2C7';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(imgMargin, curY, imgW, imgH, 8);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#F0EBE3';
+      ctx.fillRect(imgMargin, curY, imgW, imgH);
+      ctx.fillStyle = '#8E8E8E';
+      ctx.font = FONT_IMG_FALLBACK;
+      ctx.letterSpacing = '0px'; // reset — otherwise inherits '4px' from the header label above
+      ctx.fillText(archetype.name, W / 2, curY + imgH / 2 - 16);
+    }
 
     curY += imgH + 42;
 
     // ---- archetype name (English) ----
     ctx.fillStyle = '#1A1A1A';
-    ctx.font = '400 58px "DM Serif Display", Georgia, serif';
+    ctx.font = FONT_NAME;
     ctx.letterSpacing = '-0.5px';
     ctx.fillText(archetype.name, W / 2, curY);
     curY += 66; // 58px font + 8px gap
 
     // ---- bangla subtitle (with generous height clearance) ----
     ctx.fillStyle = '#4A4A4A';
-    ctx.font = '600 32px "Hind Siliguri", sans-serif';
+    ctx.font = FONT_BANGLA;
     ctx.letterSpacing = '0px';
     ctx.fillText(archetype.banglaName, W / 2, curY);
     curY += 52; // font height
@@ -124,7 +229,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     // ---- tagline (italic serif - wrapped if long) ----
     ctx.fillStyle = '#555555';
-    ctx.font = 'italic 400 26px "DM Serif Display", Georgia, serif';
+    ctx.font = FONT_TAGLINE;
     curY = wrapText(ctx, `“${archetype.tagline}”`, W / 2, curY, W - 240, 36);
 
     // Gap before blurb
@@ -132,7 +237,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     // ---- blurb (word-wrapped body) ----
     ctx.fillStyle = '#444444';
-    ctx.font = '400 22px "Inter", sans-serif';
+    ctx.font = FONT_BLURB;
     curY = wrapText(ctx, archetype.blurb, W / 2, curY, W - 260, 34);
 
     // Gap before badges
@@ -140,7 +245,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     // ---- badges (dynamically measured to eliminate any text overlap) ----
     if (badges.length > 0) {
-      ctx.font = '500 18px "Inter", sans-serif';
+      ctx.font = FONT_BADGE;
       const badgePads = 24;
       const badgeMetrics = badges.map((b) => {
         const label = `${b.icon}  ${b.name}`;
@@ -165,7 +270,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
         ctx.stroke();
 
         ctx.fillStyle = '#1A1A1A';
-        ctx.font = '500 18px "Inter", sans-serif';
+        ctx.font = FONT_BADGE;
         // Center text inside badge box
         ctx.fillText(b.label, startX + b.w / 2, curY + 11);
 
@@ -181,7 +286,7 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     // 1. Take the survey text
     ctx.fillStyle = '#1A1A1A';
-    ctx.font = '600 20px "Inter", sans-serif';
+    ctx.font = FONT_FOOTER;
     ctx.fillText(`Take the survey → ${surveyUrl}`, W / 2, footerStartY);
 
     // 2. Horizontal divider line between the two texts
@@ -195,39 +300,28 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
     // 3. Academic study attribution text below divider
     ctx.fillStyle = '#7E7E7E';
-    ctx.font = '400 15px "Inter", sans-serif';
+    ctx.font = FONT_FOOTER_SUB;
     ctx.fillText('Living Conditions & Financial Behavior Study · Demography Research 2026', W / 2, dividerY + 16);
 
     setReady(true);
   };
 
-  function wrapText(
-    context: CanvasRenderingContext2D,
-    text: string,
-    x: number,
-    y: number,
-    maxWidth: number,
-    lineHeight: number
-  ): number {
-    const words = text.split(' ');
-    let line = '';
-    let cy = y;
-    for (let i = 0; i < words.length; i++) {
-      const test = line + words[i] + ' ';
-      if (context.measureText(test).width > maxWidth && i > 0) {
-        context.fillText(line.trim(), x, cy);
-        line = words[i] + ' ';
-        cy += lineHeight;
-      } else {
-        line = test;
-      }
-    }
-    context.fillText(line.trim(), x, cy);
-    return cy + lineHeight;
-  }
-
   useEffect(() => {
-    drawCard();
+    // Hide the (now stale) download/copy/share actions until the new draw
+    // finishes, so a click mid-redraw can't grab a blank or half-drawn card.
+    setReady(false);
+
+    const controller = new AbortController();
+    void drawCard(controller.signal);
+
+    // Cancels this run if `archetype`/`badges` change again before it
+    // finishes (React always runs this before the next effect's body), and
+    // on unmount. Without this, overlapping draws could race on the same
+    // canvas — which is what caused the Bangla/italic text to sometimes
+    // render doubled and overlapping.
+    return () => {
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [archetype, badges]);
 
@@ -320,13 +414,13 @@ export const ResultCardCanvas: React.FC<ResultCardCanvasProps> = ({
 
       {/* Action buttons */}
       <div className="actions-row" style={{ marginTop: '1.25rem', justifyContent: 'center' }}>
-        <button onClick={handleDownload} className="btn btn--primary">
+        <button onClick={handleDownload} disabled={!ready} className="btn btn--primary">
           Download High-Res Card
         </button>
-        <button onClick={handleCopy} className="btn btn--outline">
+        <button onClick={handleCopy} disabled={!ready} className="btn btn--outline">
           Copy Image
         </button>
-        <button onClick={handleShare} className="btn btn--outline">
+        <button onClick={handleShare} disabled={!ready} className="btn btn--outline">
           Share
         </button>
       </div>
