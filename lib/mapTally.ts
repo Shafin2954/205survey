@@ -26,12 +26,42 @@ const LIKERT_LABELS: Record<string, number> = {
   'strongly agree': 5,
 };
 
-/** Extracts the q-number from a Tally field/column title. Returns null for
- * non-question columns (consent question, Tally metadata). */
-function titleToKey(title: string): string | null {
+/**
+ * The 40-item form (Aug 2026 cut) renumbers questions Q1..Q40. This maps the
+ * new visible number to the legacy q-key the scoring engine still expects,
+ * so scoring.ts, types.ts, and every archetype scorer stay untouched.
+ * Keep in sync with tally_import_ready.md and plan.md's "40-item cut" note.
+ */
+const NEW_TO_LEGACY: Record<number, string> = {
+  1: 'q1', 2: 'q2', 3: 'q4', 4: 'q5', 5: 'q6', 6: 'q7', 7: 'q8', 8: 'q9', 9: 'q10',
+  10: 'q15', 11: 'q17', 12: 'q21', 13: 'q27', 14: 'q29', 15: 'q31', 16: 'q33',
+  17: 'q34', 18: 'q37', 19: 'q38', 20: 'q40', 21: 'q41', 22: 'q43', 23: 'q45',
+  24: 'q46', 25: 'q48', 26: 'q53', 27: 'q54', 28: 'q55', 29: 'q56', 30: 'q57',
+  31: 'q59', 32: 'q60', 33: 'q61', 34: 'q63', 35: 'q64', 36: 'q65', 37: 'q66',
+  38: 'q68', 39: 'q73', 40: 'q76',
+};
+
+/** Highest new-form question number; used to auto-detect legacy vs. new
+ * numbering from the set of Q-numbers actually present in a payload/CSV. */
+const MAX_NEW_FORM_QNUM = 40;
+
+/** Extracts the raw q-number (e.g. 19) from a Tally field/column title.
+ * Returns null for non-question columns (consent question, Tally metadata). */
+function extractQNumber(title: string): number | null {
   const m = title.trim().match(/^Q(\d+)\b/i);
   if (!m) return null;
-  return `q${m[1]}`;
+  return Number(m[1]);
+}
+
+/**
+ * Resolves a raw Q-number to the legacy q-key the scoring engine uses.
+ * `isNewForm` (auto-detected by the caller from the max Q-number seen across
+ * the whole payload) picks between the 1..40 remap and the old identity
+ * mapping (Qn -> qn), so an old 78-item CSV export still parses correctly.
+ */
+function resolveKey(qNumber: number, isNewForm: boolean): string | null {
+  if (isNewForm) return NEW_TO_LEGACY[qNumber] ?? null;
+  return `q${qNumber}`;
 }
 
 function coerceLikert(raw: string): number | undefined {
@@ -113,9 +143,18 @@ export function mapTallyPayload(payload: unknown): MapTallyResult {
   ];
   const fields: TallyFieldLike[] = candidates.find((f) => Array.isArray(f)) ?? [];
 
+  // Prepass: look at every Q-number present to decide whether this payload
+  // uses the new 1..40 numbering or the legacy 1..78 numbering, then resolve
+  // each field's key consistently with that one decision.
+  const qNumbers = fields
+    .map((f) => extractQNumber(f.title ?? f.label ?? ''))
+    .filter((n): n is number => n !== null);
+  const isNewForm = qNumbers.length > 0 && Math.max(...qNumbers) <= MAX_NEW_FORM_QNUM;
+
   for (const field of fields) {
     const title = field.title ?? field.label ?? '';
-    const key = titleToKey(title);
+    const qNumber = extractQNumber(title);
+    const key = qNumber === null ? null : resolveKey(qNumber, isNewForm);
     if (!key) continue; // consent question / not a Q-numbered field
 
     const options = field.options ?? field.answer?.options;
@@ -227,8 +266,9 @@ interface CsvColumnInfo {
   optionLabel: string | null;
 }
 
-function classifyHeader(header: string): CsvColumnInfo | null {
-  const qKey = titleToKey(header);
+function classifyHeader(header: string, isNewForm: boolean): CsvColumnInfo | null {
+  const qNumber = extractQNumber(header);
+  const qKey = qNumber === null ? null : resolveKey(qNumber, isNewForm);
   if (!qKey) return null;
 
   if (MULTI_SELECT_KEYS.has(qKey)) {
@@ -251,7 +291,16 @@ export function mapCsvRows(csvText: string): SurveyAnswers[] {
   if (rows.length === 0) return [];
 
   const header = rows[0];
-  const columns = header.map(classifyHeader);
+
+  // Prepass over every header cell to decide new (1..40) vs. legacy (1..78)
+  // numbering, then classify every column consistently with that decision —
+  // this is what lets an old 78-item CSV export keep parsing unchanged.
+  const qNumbers = header
+    .map((h) => extractQNumber(h))
+    .filter((n): n is number => n !== null);
+  const isNewForm = qNumbers.length > 0 && Math.max(...qNumbers) <= MAX_NEW_FORM_QNUM;
+
+  const columns = header.map((h) => classifyHeader(h, isNewForm));
 
   const result: SurveyAnswers[] = [];
 

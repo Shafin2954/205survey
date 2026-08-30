@@ -14,13 +14,12 @@ interface SimulatorModalProps {
 }
 
 export const SimulatorModal: React.FC<SimulatorModalProps> = ({ isOpen, onClose }) => {
-  // Active test answers
+  // Active test answers (only the 40 keys retained in the Aug 2026 cut)
   const [answers, setAnswers] = useState<SurveyAnswers>({
-    q45: 5, q46: 5, q47: 5, q48: 5, q49: 5, q50: 5, q51: 5, q52: 5, q53: 5, q54: 1,
-    q59: 1, q60: 1, q61: 1, q62: 1, q63: 1, q64: 1,
+    q45: 5, q46: 5, q48: 5, q53: 5, q54: 1,
+    q59: 1, q60: 1, q61: 1, q63: 1, q64: 1,
     q57: '1–3 times a month',
     q31: 'No',
-    q23: 'No, I am open about my spending',
     q65: 'No, I use it as planned',
   });
 
@@ -34,142 +33,160 @@ export const SimulatorModal: React.FC<SimulatorModalProps> = ({ isOpen, onClose 
     switch (archetypeId) {
       case 'hishabi':
         newAnswers = {
-          q45: 5, q46: 5, q47: 5, q48: 5, q49: 5, q50: 5, q51: 5, q52: 5, q53: 5, q54: 1,
-          q59: 1, q60: 1, q61: 1, q62: 1, q63: 1, q64: 1,
+          q45: 5, q46: 5, q48: 5, q53: 5, q54: 1,
+          q59: 1, q60: 1, q61: 1, q63: 1, q64: 1,
+          q55: 'Yes',
+          q41: 'Yes, every month',
+          q37: 'I spend uniformly throughout the month',
           q57: '1–3 times a month',
         };
         break;
       case 'plan-then-panic':
         newAnswers = {
-          q45: 4, q46: 4, q47: 4, q48: 4, q49: 4, q50: 4, q51: 4, q52: 4, q53: 2, q54: 2,
-          q59: 5, q60: 5, q61: 5, q62: 5, q63: 4, q64: 5,
+          q45: 4, q46: 2, q48: 4, q53: 2, q54: 4,
+          q59: 5, q60: 5, q61: 5, q63: 4, q64: 5,
           q57: 'Several times a week',
         };
         break;
       case '2am-checkout':
         newAnswers = {
-          q45: 1, q46: 1, q47: 2, q48: 1, q49: 1, q50: 2, q51: 1, q52: 1, q53: 2, q54: 5,
-          q59: 5, q60: 5, q61: 5, q62: 5, q63: 5, q64: 5,
+          q45: 1, q46: 1, q48: 1, q53: 2, q54: 5,
+          q59: 5, q60: 5, q61: 5, q63: 5, q64: 5,
+          q38: ['Online shopping'],
           q57: 'Almost daily',
         };
         break;
       case 'ghost-spender':
         newAnswers = {
-          q45: 2, q46: 2, q47: 2, q48: 2, q49: 2, q50: 2, q51: 2, q52: 2, q53: 2, q54: 4,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
-          q57: 'Less than once a month',
+          q45: 2, q46: 2, q48: 2, q53: 2, q54: 4,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
+          q55: 'No idea and I avoid checking',
         };
         break;
       case 'untouchable':
         newAnswers = {
           q57: 'Never',
-          q45: 4, q46: 4, q47: 4, q48: 4, q49: 4, q50: 4, q51: 4, q52: 4, q53: 4, q54: 2,
+          q45: 4, q46: 4, q48: 4, q53: 4, q54: 2,
         };
         break;
       case 'enigma':
         newAnswers = {
-          q45: 4, q46: 4, // only 2 items answered -> invalid
+          q45: 4, q46: 4, // only 2 of 5 budgeting items answered -> invalid
           q59: 4,
         };
         break;
       case 'delusional-cfo':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3,
+          q45: 3, q46: 3, q48: 1,
           q53: 5, q54: 5, // Confident & runs out
-          q59: 3, q60: 3, q61: 3, q62: 3, q63: 3, q64: 3,
+          q59: 4, q60: 3, q61: 3, q63: 3, q64: 3,
+          q73: 'Less than most',
           q57: '1–3 times a month',
         };
         break;
       case 'humble-menace':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 5, q60: 5, q61: 4, q62: 5, q63: 4, q64: 5,
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 5, q60: 4, q61: 5, q63: 4, q64: 5,
           q73: 'Less than most',
           q57: '1–3 times a month',
         };
         break;
       case 'family-pillar':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
           q31: 'Yes',
           q34: 'Below ৳2,000',
+          q27: 5,
+          q29: 'Below ৳15,000',
+          q76: 'Give it to family',
           q57: '1–3 times a month',
         };
         break;
       case 'hustler':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
-          q33: ['Private tuition', 'Part-time job', 'Freelancing / online work'],
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
+          q33: ['Private tuition (teaching students)', 'Part-time job', 'Freelancing / online work'],
+          q56: ['Take extra tuition or work'],
+          q21: 'Entirely me',
           q57: '1–3 times a month',
         };
         break;
       case 'bank-of-friends':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
           q43: "Yes, frequently, and I don't always track who owes whom",
+          q56: ['Borrow from a friend'],
+          q38: ['Eating out with friends'],
           q57: '1–3 times a month',
         };
         break;
       case 'window-shopper':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
-          q67: 'Yes, daily',
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 1, q60: 1, q61: 1, q63: 1, q64: 1,
           q68: '0',
+          q66: 'Yes, and it usually stops me from buying',
           q57: '1–3 times a month',
         };
         break;
       case 'cart-monk':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
+          q45: 3, q46: 4, q48: 3, q53: 3, q54: 3,
+          q59: 1, q60: 2, q61: 1, q63: 1, q64: 1,
           q66: 'Yes, and it usually stops me from buying',
           q57: '1–3 times a month',
         };
         break;
       case 'pay-day-phenomenon':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3,
+          q45: 3, q46: 3, q48: 3, q53: 3,
           q37: 'Significantly more',
           q54: 5,
-          q59: 3, q60: 3, q61: 3, q62: 3, q63: 3, q64: 3,
+          q59: 3, q60: 3, q61: 3, q63: 3, q64: 3,
           q57: '1–3 times a month',
         };
         break;
       case 'cash-purist':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
           q40: ['Cash'],
+          q65: "I've never used installment options",
+          q9: 'Rural (village)',
           q57: '1–3 times a month',
         };
         break;
       case 'survivor':
         newAnswers = {
-          q45: 3, q46: 3, q47: 3, q48: 3, q49: 3, q50: 3, q51: 3, q52: 3, q53: 3, q54: 3,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
-          q28: 'Yes, it disrupted my budget significantly',
+          q45: 3, q46: 3, q48: 3, q53: 3, q54: 3,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
           q27: 5,
+          q29: 'Below ৳15,000',
+          q34: 'Below ৳2,000',
+          q56: ['Ask family for extra', 'Delay a payment'],
           q57: '1–3 times a month',
         };
         break;
       case 'cash-hoarder':
         newAnswers = {
-          q45: 4, q46: 4, q47: 4, q48: 4, q49: 4, q50: 4, q51: 4, q52: 4, q53: 4, q54: 2,
-          q59: 2, q60: 2, q61: 2, q62: 2, q63: 2, q64: 2,
+          q45: 4, q46: 4, q48: 4, q53: 4, q54: 2,
+          q59: 2, q60: 2, q61: 2, q63: 2, q64: 2,
           q41: 'Yes, every month',
-          q42: 'More than 50%',
+          q76: 'Put all of it in savings',
           q57: '1–3 times a month',
         };
         break;
       case 'son-of-king':
         newAnswers = {
-          q45: 2, q46: 2, q47: 2, q48: 2, q49: 2, q50: 2, q51: 2, q52: 2, q53: 2, q54: 3,
-          q59: 3, q60: 3, q61: 3, q62: 3, q63: 3, q64: 3,
+          q45: 2, q46: 2, q48: 2, q53: 2, q54: 1,
+          q59: 3, q60: 3, q61: 3, q63: 3, q64: 3,
           q34: '৳20,000 and above',
+          q29: '৳1,50,000 and above',
+          q33: ['Allowance from parents/family'],
           q21: 'Entirely my family',
           q57: '1–3 times a month',
         };
@@ -182,12 +199,14 @@ export const SimulatorModal: React.FC<SimulatorModalProps> = ({ isOpen, onClose 
     setScoringResult(computeSurveyResult(newAnswers));
   };
 
-  const toggleBadge = (badgeKey: 'q31' | 'q23' | 'q65') => {
+  // Q23 ("hide purchases from family") was cut from the 40-item form, so the
+  // 🤫 Secret Shopper badge is no longer reachable from live data — its toggle
+  // is intentionally removed below. Re-add Q23 to the form (see plan.md's
+  // "40-item cut" note) to bring it back, with no code change beyond this.
+  const toggleBadge = (badgeKey: 'q31' | 'q65') => {
     const nextAnswers = { ...answers };
     if (badgeKey === 'q31') {
       nextAnswers.q31 = answers.q31 === 'Yes' ? 'No' : 'Yes';
-    } else if (badgeKey === 'q23') {
-      nextAnswers.q23 = answers.q23 === 'Occasionally' ? 'No' : 'Occasionally';
     } else if (badgeKey === 'q65') {
       nextAnswers.q65 = answers.q65 === 'Yes, I use it more than planned' ? 'No' : 'Yes, I use it more than planned';
     }
@@ -223,7 +242,7 @@ export const SimulatorModal: React.FC<SimulatorModalProps> = ({ isOpen, onClose 
         {/* Preset Selector */}
         <div style={{ marginBottom: '1.5rem' }}>
           <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-            ⚡ Fast Preset Load (Click any of the 19 archetypes to preview):
+            ⚡ Fast Preset Load (Click any of the {Object.values(ARCHETYPES).length} archetypes to preview):
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {Object.values(ARCHETYPES).map((arch) => (
@@ -257,13 +276,6 @@ export const SimulatorModal: React.FC<SimulatorModalProps> = ({ isOpen, onClose 
               style={{ cursor: 'pointer' }}
             >
               🛡️ Family Safety Net ({answers.q31 === 'Yes' ? 'ON' : 'OFF'})
-            </button>
-            <button
-              onClick={() => toggleBadge('q23')}
-              className={`badge-chip ${answers.q23 === 'Occasionally' ? 'btn-primary' : ''}`}
-              style={{ cursor: 'pointer' }}
-            >
-              🤫 Secret Shopper ({answers.q23 === 'Occasionally' ? 'ON' : 'OFF'})
             </button>
             <button
               onClick={() => toggleBadge('q65')}

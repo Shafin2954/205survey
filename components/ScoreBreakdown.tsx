@@ -66,7 +66,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({ result }) => {
             <div className="score-bar__fill" style={{ width: `${bPct}%` }} />
           </div>
           <p className="score-bar__note">
-            {budgetingAnsweredCount} of 10 items answered · midpoint threshold: 3.0
+            {budgetingAnsweredCount} of 5 items answered · midpoint threshold: 3.0
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({ result }) => {
           <p className="score-bar__note">
             {result.isUntouchable
               ? 'Q57 gate: respondent never shops online'
-              : `${impulseAnsweredCount} of 6 items answered`}
+              : `${impulseAnsweredCount} of 5 items answered`}
           </p>
         </div>
       </div>

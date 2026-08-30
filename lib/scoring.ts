@@ -491,20 +491,26 @@ function scoreCashHoarder(a: SurveyAnswers): ArchetypeScore {
 // ---------------------------------------------------------------------------
 
 function computeImpulseAvg(a: SurveyAnswers): number | null {
-  const keys: Array<keyof SurveyAnswers> = ['q59', 'q60', 'q61', 'q62', 'q63', 'q64'];
+  // NOTE: 'q62' was dropped from the 40-item form (redundant with q60's
+  // promotion-urgency mechanism) but is left out of this list rather than
+  // deleted from SurveyAnswers/scoring branches elsewhere, so a future form
+  // revision can re-add it with a one-line change here.
+  const keys: Array<keyof SurveyAnswers> = ['q59', 'q60', 'q61', 'q63', 'q64'];
   let sum = 0;
   let count = 0;
   for (const k of keys) {
     const v = parseLikert(a[k]);
     if (v !== null) { sum += v; count++; }
   }
-  return count >= 4 ? Number((sum / count).toFixed(2)) : null;
+  return count >= 3 ? Number((sum / count).toFixed(2)) : null;
 }
 
 function computeBudgetAvg(a: SurveyAnswers): { score: number | null; answered: number } {
-  const straightKeys: Array<keyof SurveyAnswers> = [
-    'q45', 'q46', 'q47', 'q48', 'q49', 'q50', 'q51', 'q52', 'q53'
-  ];
+  // NOTE: 'q47', 'q49', 'q50', 'q51', 'q52' were dropped from the 40-item
+  // form (one item kept per facet: planning/adherence/tracking/self-efficacy/
+  // outcome). They stay in SurveyAnswers and other scoring branches so a
+  // future form revision can re-add them without touching this function.
+  const straightKeys: Array<keyof SurveyAnswers> = ['q45', 'q46', 'q48', 'q53'];
   let sum = 0;
   let answered = 0;
 
@@ -517,7 +523,7 @@ function computeBudgetAvg(a: SurveyAnswers): { score: number | null; answered: n
   const q54 = parseLikert(a.q54);
   if (q54 !== null) { sum += (6 - q54); answered++; }
 
-  const valid = answered >= 6;
+  const valid = answered >= 4;
   return { score: valid ? Number((sum / answered).toFixed(2)) : null, answered };
 }
 
@@ -541,14 +547,14 @@ export function computeSurveyResult(
   const budget = computeBudgetAvg(answers);
   const budgetingScore = budget.score;
   const budgetAnswered = budget.answered;
-  const isBudgetingValid = budgetAnswered >= 6;
+  const isBudgetingValid = budgetAnswered >= 4;
 
-  const impulseKeys: Array<keyof SurveyAnswers> = ['q59', 'q60', 'q61', 'q62', 'q63', 'q64'];
+  const impulseKeys: Array<keyof SurveyAnswers> = ['q59', 'q60', 'q61', 'q63', 'q64'];
   let impulseAnswered = 0;
   for (const k of impulseKeys) {
     if (parseLikert(answers[k]) !== null) impulseAnswered++;
   }
-  const isImpulseValid = impulseAnswered >= 4;
+  const isImpulseValid = impulseAnswered >= 3;
   const impulseScore = computeImpulseAvg(answers);
 
   // --- Badges (unchanged) ---
@@ -571,7 +577,7 @@ export function computeSurveyResult(
 
   // --- Completion ---
   const totalAnswered = Object.values(answers).filter(v => v !== undefined && v !== null && v !== '').length;
-  const completionPercentage = Math.min(100, Math.round((totalAnswered / 78) * 100));
+  const completionPercentage = Math.min(100, Math.round((totalAnswered / 40) * 100));
 
   // --- HARD GATE 1: Untouchable (Q57 = "Never") ---
   const isNeverOnlineShopper = answers.q57?.trim().toLowerCase() === 'never';
